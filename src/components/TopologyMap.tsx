@@ -1,8 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import * as pmtiles from 'pmtiles';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { ArcLayer, ColumnLayer, ScatterplotLayer, TextLayer, GeoJsonLayer } from '@deck.gl/layers';
 import { FREE_MAP_OPTIONS } from '../data/mapStyles';
+
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
+// Vite 환경에서 MapLibre Web Worker 명시적 등록 (PMTiles 타일 디코딩 필수)
+maplibregl.setWorkerUrl(workerUrl);
+
+const pmtilesProtocol = new pmtiles.Protocol();
+maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
 import type { MapStyleType } from '../data/mapStyles';
 import type { NetworkNode, NetworkEdge, RegionSummaryNode, AlarmSeverity, LabelConfig } from '../types/topology';
 import type { ClusteredTopologyResult } from '../utils/summaryEngine';
@@ -118,9 +127,15 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     });
   }, [is3DMode]);
 
+  const isFirstStyleRenderRef = useRef(true);
+
   // 3-1. 무료 지도 스타일 동적 변경 반영
   useEffect(() => {
     if (!mapRef.current) return;
+    if (isFirstStyleRenderRef.current) {
+      isFirstStyleRenderRef.current = false;
+      return;
+    }
     const opt = FREE_MAP_OPTIONS.find(o => o.id === currentMapStyle) || FREE_MAP_OPTIONS[0];
     mapRef.current.setStyle(opt.style as any);
   }, [currentMapStyle]);

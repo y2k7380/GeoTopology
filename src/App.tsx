@@ -15,8 +15,8 @@ export const App: React.FC = () => {
   const [nodes, setNodes] = useState<NetworkNode[]>(initialData.nodes);
   const [edges, setEdges] = useState<NetworkEdge[]>(initialData.edges);
 
-  // 지도 스타일 상태 (기본값: 100% 완전 오프라인 내장 대한민국 3D 다크 벡터 맵)
-  const [currentMapStyle, setCurrentMapStyle] = useState<MapStyleType>('OFFLINE_VECTOR_DARK');
+  // 지도 스타일 상태 (기본값: 100% 완전 오프라인 Protomaps PMTiles 대한민국 풀벡터 다크 맵)
+  const [currentMapStyle, setCurrentMapStyle] = useState<MapStyleType>('OFFLINE_PMTILES_DARK');
 
   // 노드 라벨 규칙 설정 상태
   const [labelConfig, setLabelConfig] = useState<LabelConfig>(DEFAULT_LABEL_CONFIG);

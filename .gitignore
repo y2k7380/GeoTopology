@@ -25,3 +25,6 @@ dist-ssr
 
 # Screenshots
 screenshot*.png
+
+# Local tools
+tools/

@@ -1,11 +1,15 @@
+import layers from 'protomaps-themes-base';
+
 // 다양한 100% 무료 온라인 지도 및 100% 로컬 내장 오프라인 벡터 지도 스타일 정의
 
 export type MapStyleType = 
+  | 'OFFLINE_PMTILES_DARK'
+  | 'OFFLINE_PMTILES_LIGHT'
+  | 'OFFLINE_TILE_STREET'
+  | 'OFFLINE_TILE_TOPO'
   | 'OFFLINE_VECTOR_DARK'
   | 'OFFLINE_VECTOR_LIGHT'
   | 'OFFLINE_VECTOR_CYBER'
-  | 'OFFLINE_TILE_STREET'
-  | 'OFFLINE_TILE_TOPO'
   | 'OSM_STANDARD'
   | 'CARTO_VOYAGER'
   | 'CARTO_DARK'
@@ -25,6 +29,34 @@ const getOrigin = () => {
   }
   return 'http://127.0.0.1:5173';
 };
+
+// [오프라인 PMTiles 1] Protomaps PMTiles 대한민국 단일 파일(73MB) 풀벡터 다크 맵
+export const createPmtilesDarkStyle = () => ({
+  version: 8 as const,
+  glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+  sources: {
+    protomaps: {
+      type: 'vector' as const,
+      url: `pmtiles://${getOrigin()}/data/korea.pmtiles`,
+      attribution: '© OpenStreetMap contributors, © Protomaps Offline',
+    },
+  },
+  layers: (layers as any)('protomaps', 'dark', 'ko'),
+});
+
+// [오프라인 PMTiles 2] Protomaps PMTiles 대한민국 단일 파일(73MB) 풀벡터 라이트 맵
+export const createPmtilesLightStyle = () => ({
+  version: 8 as const,
+  glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+  sources: {
+    protomaps: {
+      type: 'vector' as const,
+      url: `pmtiles://${getOrigin()}/data/korea.pmtiles`,
+      attribution: '© OpenStreetMap contributors, © Protomaps Offline',
+    },
+  },
+  layers: (layers as any)('protomaps', 'light', 'ko'),
+});
 
 // [오프라인 1] 100% 완전 오프라인 내장 대한민국 3D 다크 벡터 맵 (NMS 관제 특화)
 export const createOfflineVectorDarkStyle = () => ({
@@ -319,6 +351,34 @@ export const SATELLITE_FREE_STYLE = {
 
 export const FREE_MAP_OPTIONS: MapStyleOption[] = [
   {
+    id: 'OFFLINE_PMTILES_DARK',
+    name: '💾 [오프라인 PMTiles] 대한민국 풀벡터 다크 맵 ⭐',
+    badge: 'OFFLINE',
+    description: 'Protomaps PMTiles 단일 파일(73MB) 기반 100% 완전 오프라인 도로/지형/수계 벡터 맵',
+    style: createPmtilesDarkStyle(),
+  },
+  {
+    id: 'OFFLINE_PMTILES_LIGHT',
+    name: '💾 [오프라인 PMTiles] 대한민국 풀벡터 라이트 맵',
+    badge: 'OFFLINE',
+    description: 'Protomaps PMTiles 단일 파일(73MB) 기반 100% 완전 오프라인 고화질 컬러 벡터 맵',
+    style: createPmtilesLightStyle(),
+  },
+  {
+    id: 'OFFLINE_TILE_STREET',
+    name: '💾 [오프라인] 로컬 상세 스트리트 맵',
+    badge: 'OFFLINE',
+    description: '100% 로컬 내장(public/tiles/street) 상세 도로/도시 타일 (줌 5~13 수록)',
+    style: createOfflineStreetTileStyle(),
+  },
+  {
+    id: 'OFFLINE_TILE_TOPO',
+    name: '💾 [오프라인] 로컬 상세 지형 맵 (Topo)',
+    badge: 'OFFLINE',
+    description: '100% 로컬 내장(public/tiles/topo) 국토 지형/등고선 타일 (줌 5~13 수록)',
+    style: createOfflineTopoTileStyle(),
+  },
+  {
     id: 'OFFLINE_VECTOR_DARK',
     name: '💾 [오프라인] 대한민국 3D 다크 벡터 맵',
     badge: 'OFFLINE',
@@ -338,20 +398,6 @@ export const FREE_MAP_OPTIONS: MapStyleOption[] = [
     badge: 'OFFLINE',
     description: '100% 완전 오프라인 폐쇄망 구동 (사이버펑크 네온 보라빛 테마)',
     style: createOfflineVectorCyberStyle(),
-  },
-  {
-    id: 'OFFLINE_TILE_STREET',
-    name: '💾 [오프라인] 로컬 상세 스트리트 맵',
-    badge: 'OFFLINE',
-    description: '100% 로컬 내장(public/tiles/street) 상세 도로/도시 타일 (줌 5~13 수록)',
-    style: createOfflineStreetTileStyle(),
-  },
-  {
-    id: 'OFFLINE_TILE_TOPO',
-    name: '💾 [오프라인] 로컬 상세 지형 맵 (Topo)',
-    badge: 'OFFLINE',
-    description: '100% 로컬 내장(public/tiles/topo) 국토 지형/등고선 타일 (줌 5~13 수록)',
-    style: createOfflineTopoTileStyle(),
   },
   {
     id: 'OSM_STANDARD',
