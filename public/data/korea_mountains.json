@@ -1,0 +1,242 @@
+[
+  {
+    "name": "북한산 백운대",
+    "lat": 37.6586,
+    "lng": 126.9781,
+    "alt": 836,
+    "province": "서울",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "관악산 연주대",
+    "lat": 37.4444,
+    "lng": 126.9639,
+    "alt": 629,
+    "province": "서울",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "용문산 가섭봉",
+    "lat": 37.5558,
+    "lng": 127.5458,
+    "alt": 1157,
+    "province": "경기",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "감악산",
+    "lat": 37.9867,
+    "lng": 126.9422,
+    "alt": 675,
+    "province": "경기",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "수리산 태을봉",
+    "lat": 37.3622,
+    "lng": 126.9144,
+    "alt": 489,
+    "province": "경기",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "설악산 대청봉",
+    "lat": 38.1194,
+    "lng": 128.4656,
+    "alt": 1708,
+    "province": "강원",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "치악산 비로봉",
+    "lat": 37.3639,
+    "lng": 128.0556,
+    "alt": 1288,
+    "province": "강원",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "태백산 장군봉",
+    "lat": 37.0983,
+    "lng": 128.9172,
+    "alt": 1567,
+    "province": "강원",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "오대산 비로봉",
+    "lat": 37.7981,
+    "lng": 128.5447,
+    "alt": 1563,
+    "province": "강원",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "화악산 중봉",
+    "lat": 38.0267,
+    "lng": 127.5256,
+    "alt": 1446,
+    "province": "강원",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "가리왕산",
+    "lat": 37.4633,
+    "lng": 128.5639,
+    "alt": 1561,
+    "province": "강원",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "계룡산 천황봉",
+    "lat": 36.3389,
+    "lng": 127.2069,
+    "alt": 845,
+    "province": "충남",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "대둔산 마천대",
+    "lat": 36.1264,
+    "lng": 127.3197,
+    "alt": 878,
+    "province": "충남",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "속리산 천왕봉",
+    "lat": 36.5333,
+    "lng": 127.8333,
+    "alt": 1058,
+    "province": "충북",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "월악산 영봉",
+    "lat": 36.8589,
+    "lng": 128.0967,
+    "alt": 1097,
+    "province": "충북",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "서운산",
+    "lat": 36.9367,
+    "lng": 127.2889,
+    "alt": 547,
+    "province": "충남",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "지리산 천왕봉",
+    "lat": 35.3372,
+    "lng": 128.2831,
+    "alt": 1915,
+    "province": "경남/전남/전북",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "지리산 노고단",
+    "lat": 35.2936,
+    "lng": 127.5292,
+    "alt": 1507,
+    "province": "전남",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "덕유산 향적봉",
+    "lat": 35.8603,
+    "lng": 127.7472,
+    "alt": 1614,
+    "province": "전북",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "무등산 서석대",
+    "lat": 35.1389,
+    "lng": 126.9889,
+    "alt": 1187,
+    "province": "광주/전남",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "월출산 천황봉",
+    "lat": 34.7578,
+    "lng": 126.6875,
+    "alt": 809,
+    "province": "전남",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "모악산",
+    "lat": 35.7083,
+    "lng": 127.0917,
+    "alt": 793,
+    "province": "전북",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "팔공산 비로봉",
+    "lat": 35.9867,
+    "lng": 128.6989,
+    "alt": 1193,
+    "province": "대구/경북",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "금오산 현월봉",
+    "lat": 36.0847,
+    "lng": 128.3039,
+    "alt": 976,
+    "province": "경북",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "주왕산 주봉",
+    "lat": 36.3986,
+    "lng": 129.1764,
+    "alt": 721,
+    "province": "경북",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "금정산 고당봉",
+    "lat": 35.2789,
+    "lng": 129.0558,
+    "alt": 801,
+    "province": "부산",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "가지산",
+    "lat": 35.6194,
+    "lng": 129.0167,
+    "alt": 1241,
+    "province": "울산/경북",
+    "type": "REPEATER_HUB"
+  },
+  {
+    "name": "황매산",
+    "lat": 35.4889,
+    "lng": 127.9789,
+    "alt": 1113,
+    "province": "경남",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "비슬산 대견봉",
+    "lat": 35.7167,
+    "lng": 128.5167,
+    "alt": 1084,
+    "province": "대구",
+    "type": "REPEATER_SITE"
+  },
+  {
+    "name": "한라산 백록담",
+    "lat": 33.3617,
+    "lng": 126.5332,
+    "alt": 1950,
+    "province": "제주",
+    "type": "REPEATER_HUB"
+  }
+]

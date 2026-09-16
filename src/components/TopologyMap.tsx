@@ -55,11 +55,17 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
   } | null>(null);
 
   const [offlineCities, setOfflineCities] = useState<{ name: string; lng: number; lat: number; rank: number }[]>([]);
+  const [mountains, setMountains] = useState<{ name: string; lat: number; lng: number; alt: number; type: string }[]>([]);
 
   useEffect(() => {
     fetch('/data/korea_cities.json')
       .then(r => r.json())
       .then(data => setOfflineCities(data))
+      .catch(() => {});
+
+    fetch('/data/korea_mountains.json')
+      .then(r => r.json())
+      .then(data => setMountains(data))
       .catch(() => {});
   }, []);
 
@@ -192,33 +198,31 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
       const isCyber = currentMapStyle === 'OFFLINE_VECTOR_CYBER';
       const isPureVector = currentMapStyle.startsWith('OFFLINE_VECTOR_');
 
-      // 0-1. 순수 벡터 모드일 때 대한민국 17개 광역시도 베이스 육지 폴리곤 및 외곽 경계
-      if (isPureVector) {
-        layers.push(
-          new GeoJsonLayer({
-            id: 'korea-offline-provinces-base',
-            data: '/data/korea_provinces.json',
-            stroked: true,
-            filled: true,
-            extruded: false,
-            getFillColor: isLight
-              ? [241, 245, 249, 255] // 라이트 컬러 육지
-              : isCyber
-              ? [24, 18, 48, 255]   // 사이버펑크 퍼플 육지
-              : [19, 30, 54, 255],  // 다크 네이비 NMS 육지
-            getLineColor: isLight
-              ? [2, 132, 199, 240]  // 선명한 블루 외곽선
-              : isCyber
-              ? [168, 85, 247, 255] // 네온 퍼플 외곽선
-              : [6, 182, 212, 240], // 네온 사이안 외곽선
-            getLineWidth: 2.2,
-            lineWidthMinPixels: 2.0,
-            pickable: false,
-          })
-        );
-      }
+      // 0-1. 대한민국 17개 광역시도 외곽 경계선 (순수 벡터일 때는 육지 채움, PMTiles일 때는 경계선 오버레이)
+      layers.push(
+        new GeoJsonLayer({
+          id: 'korea-offline-provinces-base',
+          data: '/data/korea_provinces.json',
+          stroked: true,
+          filled: isPureVector,
+          extruded: false,
+          getFillColor: isLight
+            ? [241, 245, 249, 255]
+            : isCyber
+            ? [24, 18, 48, 255]
+            : [19, 30, 54, 255],
+          getLineColor: isLight
+            ? [2, 132, 199, 240]
+            : isCyber
+            ? [168, 85, 247, 255]
+            : [6, 182, 212, 240], // 네온 청록 광역시도 경계선
+          getLineWidth: 2.5,
+          lineWidthMinPixels: 2.0,
+          pickable: false,
+        })
+      );
 
-      // 0-2. 대한민국 250개 시·군·구 상세 내부 행정 경계선 (모든 오프라인 모드 적용!)
+      // 0-2. 대한민국 250개 시·군·구 상세 내부 행정 경계선
       layers.push(
         new GeoJsonLayer({
           id: 'korea-offline-muni-borders',
@@ -226,60 +230,58 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
           stroked: true,
           filled: false,
           getLineColor: isLight
-            ? [148, 163, 184, 160] // 라이트 그레이 시군구 경계
+            ? [148, 163, 184, 170]
             : isCyber
-            ? [139, 92, 246, 140]  // 사이버 바이올렛 시군구 경계
-            : [56, 189, 248, 120], // 다크 네온 은은한 시군구 경계
+            ? [139, 92, 246, 150]
+            : [56, 189, 248, 130],
           getLineWidth: 1.2,
           lineWidthMinPixels: 0.9,
           pickable: false,
         })
       );
 
-      // 0-3. 대한민국 주요 하천/수계 (한강, 낙동강, 금강, 영산강 등 - 순수 벡터 모드)
-      if (isPureVector) {
-        layers.push(
-          new GeoJsonLayer({
-            id: 'korea-offline-waterways',
-            data: '/data/korea_waterways.json',
-            stroked: true,
-            filled: true,
-            getLineColor: isLight
-              ? [56, 189, 248, 220]
-              : isCyber
-              ? [6, 182, 212, 220]
-              : [14, 165, 233, 220],
-            getFillColor: [14, 165, 233, 130],
-            getLineWidth: 2.5,
-            lineWidthMinPixels: 2.0,
-            pickable: false,
-          })
-        );
+      // 0-3. 대한민국 주요 하천/수계 (한강, 낙동강, 금강, 영산강 및 주요 호수)
+      layers.push(
+        new GeoJsonLayer({
+          id: 'korea-offline-waterways',
+          data: '/data/korea_waterways.json',
+          stroked: true,
+          filled: true,
+          getLineColor: isLight
+            ? [56, 189, 248, 230]
+            : isCyber
+            ? [6, 182, 212, 230]
+            : [14, 165, 233, 230],
+          getFillColor: [14, 165, 233, 140],
+          getLineWidth: 2.5,
+          lineWidthMinPixels: 2.0,
+          pickable: false,
+        })
+      );
 
-        // 0-4. 대한민국 주요 고속도로 및 간선 도로망
-        layers.push(
-          new GeoJsonLayer({
-            id: 'korea-offline-highways',
-            data: '/data/korea_roads.json',
-            stroked: true,
-            filled: false,
-            getLineColor: isLight
-              ? [249, 115, 22, 190]
-              : isCyber
-              ? [236, 72, 153, 190]
-              : [245, 158, 11, 170],
-            getLineWidth: 2.0,
-            lineWidthMinPixels: 1.5,
-            pickable: false,
-          })
-        );
-      }
+      // 0-4. 대한민국 전국 주요 고속도로 및 간선 도로망 대동맥
+      layers.push(
+        new GeoJsonLayer({
+          id: 'korea-offline-highways',
+          data: '/data/korea_roads.json',
+          stroked: true,
+          filled: false,
+          getLineColor: isLight
+            ? [234, 88, 12, 220] // 선명한 오렌지
+            : isCyber
+            ? [236, 72, 153, 210] // 핫핑크
+            : [245, 158, 11, 200], // 골드 앰버 고속도로
+          getLineWidth: 2.2,
+          lineWidthMinPixels: 1.6,
+          pickable: false,
+        })
+      );
 
-      // 0-5. 전국 주요 도시 및 시·군·구 지명 텍스트 라벨 (모든 오프라인 모드 적용!)
+      // 0-5. 전국 63대 주요 거점 도시 및 250개 시·군·구 지명 텍스트 라벨
       if (offlineCities.length > 0) {
-        const visibleCities = currentZoom < 8.0
-          ? offlineCities.filter(c => c.rank === 1) // 전국 광역 뷰: 거점 대도시
-          : offlineCities; // 줌인 뷰: 250개 시군구 전체 표시
+        const visibleCities = currentZoom < 7.2
+          ? offlineCities.filter(c => c.rank === 1) // 전국 광역 뷰: 전국 63대 주요 거점 도시
+          : offlineCities; // 줌인 뷰: 전국 268개 시군구 전체 표시
 
         layers.push(
           new TextLayer({
@@ -287,7 +289,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             data: visibleCities,
             getPosition: (d: any) => [d.lng, d.lat, 5],
             getText: (d: any) => d.name,
-            getSize: (d: any) => (d.rank === 1 ? (currentZoom < 8 ? 13 : 15) : 11),
+            getSize: (d: any) => (d.rank === 1 ? (currentZoom < 7.2 ? 13 : 15) : 11),
             getColor: isLight
               ? [30, 41, 59, 240]
               : isCyber
@@ -296,12 +298,59 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             getTextAnchor: 'middle',
             getAlignmentBaseline: 'center',
             billboard: true,
-            fontFamily: 'Pretendard, -apple-system, sans-serif',
-            fontWeight: 600,
+            fontFamily: 'Pretendard, -apple-system, "Noto Sans KR", sans-serif',
+            fontWeight: 700,
             characterSet: 'auto',
             background: true,
-            getBackgroundColor: isLight ? [255, 255, 255, 150] : [15, 23, 42, 150],
-            backgroundPadding: [3, 1, 3, 1],
+            getBackgroundColor: isLight ? [255, 255, 255, 190] : [15, 23, 42, 190],
+            backgroundPadding: [5, 2, 5, 2],
+            pickable: false,
+          })
+        );
+      }
+
+      // 0-6. 대한민국 전국 30대 명산 및 산악 통신 중계 거점 표고점 (산악 지형 시각화)
+      if (mountains.length > 0) {
+        // 산 정상 표고점 펄스 포인트 (초록/에메랄드 링)
+        layers.push(
+          new ScatterplotLayer({
+            id: 'korea-mountain-peaks-dots',
+            data: mountains,
+            getPosition: (d: any) => [d.lng, d.lat, 25],
+            getRadius: (d: any) => (d.type === 'REPEATER_HUB' ? 1400 : 900),
+            getFillColor: isLight
+              ? [16, 185, 129, 210] // 산악 에메랄드 그린
+              : [52, 211, 153, 230], // 네온 민트 그린
+            getLineWidth: 2,
+            getLineColor: [255, 255, 255, 230],
+            stroked: true,
+            pickable: false,
+          })
+        );
+
+        // 산 정상 지명 및 해발고도 라벨
+        layers.push(
+          new TextLayer({
+            id: 'korea-mountain-peaks-labels',
+            data: mountains,
+            getPosition: (d: any) => [d.lng, d.lat, 40],
+            getText: (d: any) => `▲ ${d.name} (${d.alt}m)`,
+            getSize: 12,
+            getColor: isLight
+              ? [6, 95, 70, 255]
+              : [167, 243, 208, 255], // 에메랄드 민트 텍스트
+            getTextAnchor: 'start',
+            getAlignmentBaseline: 'bottom',
+            billboard: true,
+            fontFamily: 'Pretendard, -apple-system, "Noto Sans KR", sans-serif',
+            fontWeight: 800,
+            characterSet: 'auto',
+            background: true,
+            getBackgroundColor: isLight ? [255, 255, 255, 210] : [6, 44, 34, 220],
+            getBorderColor: isLight ? [16, 185, 129, 200] : [52, 211, 153, 220],
+            getBorderWidth: 1,
+            backgroundPadding: [4, 2],
+            pickable: false,
           })
         );
       }
@@ -665,7 +714,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     }
 
     overlayRef.current.setProps({ layers });
-  }, [allNodes, allEdges, currentZoom, filterSeverity, getSeverityColor, onSelectNode, selectedNode, labelConfig, currentMapStyle, offlineCities]);
+  }, [allNodes, allEdges, currentZoom, filterSeverity, getSeverityColor, onSelectNode, selectedNode, labelConfig, currentMapStyle, offlineCities, mountains]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>

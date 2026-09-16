@@ -220,6 +220,189 @@ export function generateInitialTopology(): { nodes: NetworkNode[]; edges: Networ
       });
     }
   });
+  // 3. [전국 산악 통신 중계국사망 (Mountain Repeater Stations)]
+  // 통신 3사 및 국가자가망 산악 정상 무선 중계 거점 14개소
+  const MOUNTAIN_REPEATER_STATIONS = [
+    { name: '설악산대청봉중계국사', mountain: '설악산', postalCode: '25001', province: '강원특별자치도', cityDistrict: '양양군', lat: 38.1194, lng: 128.4656, elevation: 1708, linkedPostal: '25457' },
+    { name: '지리산천왕봉중계국사', mountain: '지리산', postalCode: '52201', province: '경상남도', cityDistrict: '산청군', lat: 35.3372, lng: 128.2831, elevation: 1915, linkedPostal: '51435' },
+    { name: '한라산백록담중계국사', mountain: '한라산', postalCode: '63001', province: '제주특별자치도', cityDistrict: '서귀포시', lat: 33.3617, lng: 126.5332, elevation: 1950, linkedPostal: '63122' },
+    { name: '북한산백운대중계소', mountain: '북한산', postalCode: '01001', province: '서울특별시', cityDistrict: '강북구', lat: 37.6586, lng: 126.9781, elevation: 836, linkedPostal: '03186' },
+    { name: '관악산연주대중계국사', mountain: '관악산', postalCode: '08701', province: '서울특별시', cityDistrict: '관악구', lat: 37.4444, lng: 126.9639, elevation: 629, linkedPostal: '06611' },
+    { name: '용문산통신중계소', mountain: '용문산', postalCode: '12501', province: '경기도', cityDistrict: '양평군', lat: 37.5558, lng: 127.5458, elevation: 1157, linkedPostal: '13494' },
+    { name: '치악산비로봉중계소', mountain: '치악산', postalCode: '26401', province: '강원특별자치도', cityDistrict: '원주시', lat: 37.3639, lng: 128.0556, elevation: 1288, linkedPostal: '26464' },
+    { name: '태백산장군봉중계국사', mountain: '태백산', postalCode: '26001', province: '강원특별자치도', cityDistrict: '태백시', lat: 37.0983, lng: 128.9172, elevation: 1567, linkedPostal: '37666' },
+    { name: '계룡산천황봉중계국사', mountain: '계룡산', postalCode: '32001', province: '충청남도', cityDistrict: '계룡시', lat: 36.3389, lng: 127.2069, elevation: 845, linkedPostal: '34141' },
+    { name: '속리산천왕봉중계소', mountain: '속리산', postalCode: '28901', province: '충청북도', cityDistrict: '보은군', lat: 36.5333, lng: 127.8333, elevation: 1058, linkedPostal: '30151' },
+    { name: '덕유산향적봉중계국사', mountain: '덕유산', postalCode: '55501', province: '전북특별자치도', cityDistrict: '무주군', lat: 35.8603, lng: 127.7472, elevation: 1614, linkedPostal: '54994' },
+    { name: '팔공산비로봉중계국사', mountain: '팔공산', postalCode: '41001', province: '대구광역시', cityDistrict: '동구', lat: 35.9867, lng: 128.6989, elevation: 1193, linkedPostal: '42194' },
+    { name: '무등산서석대중계소', mountain: '무등산', postalCode: '61001', province: '광주광역시', cityDistrict: '동구', lat: 35.1389, lng: 126.9889, elevation: 1187, linkedPostal: '61947' },
+    { name: '금정산고당봉중계소', mountain: '금정산', postalCode: '46201', province: '부산광역시', cityDistrict: '금정구', lat: 35.2789, lng: 129.0558, elevation: 801, linkedPostal: '48058' },
+  ];
+
+  const mountainCoreNodes: NetworkNode[] = [];
+
+  MOUNTAIN_REPEATER_STATIONS.forEach((mtn, mtnIdx) => {
+    const baseAlt = Math.round(mtn.elevation * 0.35 + 150); // 산 정상 해발 고도 반영
+    const mtnDevices = [
+      { role: 'CORE_ROUTER' as const, suffix: 'MW01', model: 'Ericsson MINI-LINK 6600', vendor: 'Ericsson', alt: baseAlt + 60, roleName: '마이크로웨이브 송수신기' },
+      { role: 'AGGREGATION_ROUTER' as const, suffix: 'AR01', model: 'Cisco NCS 540 Rugged', vendor: 'Cisco', alt: baseAlt + 30, roleName: '내환경 산악 라우터' },
+      { role: 'DIST_SWITCH' as const, suffix: 'RTU01', model: 'Moxa EDS-G512E', vendor: 'Moxa', alt: baseAlt, roleName: '고지대 환경감시 제어기' },
+    ];
+
+    const mtnStationNodes: NetworkNode[] = [];
+
+    mtnDevices.forEach((dev, devIdx) => {
+      const nodeId = `NODE_${mtn.postalCode}_${dev.suffix}`;
+      const offsetLat = (devIdx - 1) * 0.0005;
+      const offsetLng = (devIdx % 2 === 0 ? 1 : -1) * 0.0006;
+
+      // 설악산과 지리산 마이크로웨이브 링크에 기상 악화(돌풍/폭설) 경보 시뮬레이션
+      let status: AlarmSeverity = 'NORMAL';
+      const alarms: AlarmItem[] = [];
+
+      if (mtn.postalCode === '25001' && dev.suffix === 'MW01') {
+        status = 'MAJOR';
+        alarms.push({
+          id: `ALM_${nodeId}_01`,
+          severity: 'MAJOR',
+          code: 'ALM_MW_FADING',
+          title: 'Microwave Rain/Snow Fading',
+          description: '설악산 정상 기상 악화(돌풍/폭설)로 마이크로웨이브 수신레벨(RSL) 15dB 저하',
+          timestamp: '2026-09-16 17:10:00',
+        });
+      } else if (mtn.postalCode === '52201' && dev.suffix === 'AR01') {
+        status = 'MINOR';
+        alarms.push({
+          id: `ALM_${nodeId}_02`,
+          severity: 'MINOR',
+          code: 'ALM_SOLAR_LOW',
+          title: 'Solar Battery Level Warning',
+          description: '지리산 천왕봉 태양광 보조 배터리 충전 전압 저하 (흐린 날씨)',
+          timestamp: '2026-09-16 16:50:00',
+        });
+      }
+
+      const node: NetworkNode = {
+        id: nodeId,
+        name: `${mtn.name} [${mtn.mountain}] ${dev.suffix}`,
+        type: dev.role,
+        lat: mtn.lat + offsetLat,
+        lng: mtn.lng + offsetLng,
+        altitude: dev.alt,
+        status,
+        postalCode: mtn.postalCode,
+        province: mtn.province,
+        cityDistrict: mtn.cityDistrict,
+        address: `${mtn.province} ${mtn.cityDistrict} ${mtn.mountain} 정상 (${mtn.name})`,
+        stationName: `${mtn.name} (해발 ${mtn.elevation}m)`,
+        rackLocation: `MtnShelter-R01-Slot${devIdx + 1}`,
+        ipAddress: `10.88.${mtnIdx + 1}.${devIdx + 1}`,
+        vendor: dev.vendor,
+        model: dev.model,
+        metrics: {
+          cpuPercent: Math.floor(20 + Math.random() * 45),
+          memoryPercent: Math.floor(35 + Math.random() * 35),
+          tempCelsius: Math.floor(12 + Math.random() * 18), // 산 정상은 기온이 낮음
+          trafficGbps: Number((Math.random() * 35 + 8).toFixed(1)),
+          portCount: 24,
+          activePorts: 16,
+        },
+        alarms,
+      };
+
+      nodes.push(node);
+      mtnStationNodes.push(node);
+      if (dev.suffix === 'MW01') {
+        mountainCoreNodes.push(node);
+      }
+    });
+
+    // 산악 국사 내부 인터링크
+    for (let i = 0; i < mtnStationNodes.length - 1; i++) {
+      const src = mtnStationNodes[i];
+      const tgt = mtnStationNodes[i + 1];
+      edges.push({
+        id: `EDGE_MTN_INTRA_${src.id}_${tgt.id}`,
+        source: src.id,
+        target: tgt.id,
+        sourceCoordinates: [src.lng, src.lat],
+        targetCoordinates: [tgt.lng, tgt.lat],
+        linkType: 'DIST_10G',
+        status: 'UP',
+        bandwidthGbps: 10,
+        trafficUtilPercent: Math.floor(30 + Math.random() * 40),
+        latencyMs: 0.35,
+        packetLossPercent: 0,
+        alarms: [],
+      });
+    }
+
+    // 산악 중계소 <-> 인근 평지 도심 국사 간 고주파 무선 마이크로웨이브 백본 링크
+    const mainStationNode = coreNodes.find(n => n.postalCode === mtn.linkedPostal);
+    const mtnMwNode = mtnStationNodes.find(n => n.name.includes('MW01'));
+    if (mainStationNode && mtnMwNode) {
+      edges.push({
+        id: `EDGE_MW_${mtnMwNode.id}_${mainStationNode.id}`,
+        source: mtnMwNode.id,
+        target: mainStationNode.id,
+        sourceCoordinates: [mtnMwNode.lng, mtnMwNode.lat],
+        targetCoordinates: [mainStationNode.lng, mainStationNode.lat],
+        linkType: 'METRO_RING_40G',
+        status: mtnMwNode.status === 'MAJOR' ? 'WARNING' : 'UP',
+        bandwidthGbps: 40,
+        trafficUtilPercent: Math.floor(45 + Math.random() * 40),
+        latencyMs: Number((1.2 + Math.random() * 2.0).toFixed(2)),
+        packetLossPercent: mtnMwNode.status === 'MAJOR' ? 1.5 : 0,
+        alarms: mtnMwNode.status === 'MAJOR' ? [
+          {
+            id: `ALM_MW_EDGE_${mtnIdx}`,
+            severity: 'MAJOR',
+            title: 'Wireless Backbone Degradation',
+            code: 'ALM_LINK_DEG',
+            timestamp: '2026-09-16 17:11:00',
+            description: `${mtnMwNode.stationName} ~ ${mainStationNode.stationName} 무선 마이크로웨이브 감쇄 발생`,
+          }
+        ] : [],
+      });
+    }
+  });
+
+  // 4. 백두대간 및 주요 산맥을 잇는 산악 무선 백본 링 (Mountain Wireless Backbone Ring)
+  // 북한산 - 용문산 - 설악산 - 치악산 - 태백산 - 속리산 - 덕유산 - 지리산
+  const mtnRingPairs = [
+    { srcName: '북한산', tgtName: '용문산' },
+    { srcName: '용문산', tgtName: '설악산' },
+    { srcName: '설악산', tgtName: '치악산' },
+    { srcName: '치악산', tgtName: '태백산' },
+    { srcName: '태백산', tgtName: '속리산' },
+    { srcName: '속리산', tgtName: '팔공산' },
+    { srcName: '팔공산', tgtName: '지리산' },
+    { srcName: '지리산', tgtName: '무등산' },
+    { srcName: '속리산', tgtName: '계룡산' },
+    { srcName: '계룡산', tgtName: '관악산' },
+    { srcName: '관악산', tgtName: '북한산' },
+  ];
+
+  mtnRingPairs.forEach(pair => {
+    const srcNode = mountainCoreNodes.find(n => n.name.includes(pair.srcName));
+    const tgtNode = mountainCoreNodes.find(n => n.name.includes(pair.tgtName));
+    if (srcNode && tgtNode) {
+      edges.push({
+        id: `EDGE_MTN_RING_${srcNode.id}_${tgtNode.id}`,
+        source: srcNode.id,
+        target: tgtNode.id,
+        sourceCoordinates: [srcNode.lng, srcNode.lat],
+        targetCoordinates: [tgtNode.lng, tgtNode.lat],
+        linkType: 'METRO_RING_40G',
+        status: (srcNode.status === 'MAJOR' || tgtNode.status === 'MAJOR') ? 'WARNING' : 'UP',
+        bandwidthGbps: 40,
+        trafficUtilPercent: Math.floor(40 + Math.random() * 35),
+        latencyMs: Number((2.0 + Math.random() * 2.5).toFixed(2)),
+        packetLossPercent: 0,
+        alarms: [],
+      });
+    }
+  });
 
   return { nodes, edges };
 }
