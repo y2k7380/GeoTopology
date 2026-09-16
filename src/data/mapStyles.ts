@@ -78,8 +78,29 @@ export const createPmtilesDarkStyle = () => {
         ...l,
         paint: {
           ...l.paint,
-          'line-color': '#64748b', // 선명한 슬레이트 도심 도로
+          'line-color': '#475569', // 선명한 슬레이트 도심 도로
           'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 10, 0.6, 14, 2.0],
+        },
+      };
+    }
+    if (l.id.includes('rail') && l.type === 'line') {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#a855f7', // 보라색 철도망
+          'line-width': 1.5,
+        },
+      };
+    }
+    if (l.id === 'buildings') {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'fill-color': '#1e293b', // 3D 건물 슬레이트 다크
+          'fill-opacity': 0.85,
+          'fill-outline-color': '#334155',
         },
       };
     }
@@ -104,7 +125,7 @@ export const createPmtilesDarkStyle = () => {
       protomaps: {
         type: 'vector' as const,
         url: `pmtiles://${getOrigin()}/data/korea.pmtiles`,
-        attribution: '© OpenStreetMap contributors, © Protomaps Offline',
+        attribution: '© OpenStreetMap contributors, © Protomaps Korea Nationwide Offline',
       },
     },
     layers: enhancedLayers,
@@ -475,16 +496,16 @@ export const SATELLITE_FREE_STYLE = {
 export const FREE_MAP_OPTIONS: MapStyleOption[] = [
   {
     id: 'OFFLINE_PMTILES_DARK',
-    name: '💾 [오프라인 PMTiles] 대한민국 풀벡터 다크 맵 ⭐',
+    name: '💾 [오프라인 PMTiles] 대한민국 전국 풀벡터 다크 맵 ⭐',
     badge: 'OFFLINE',
-    description: 'Protomaps PMTiles 단일 파일(73MB) 기반 100% 완전 오프라인 도로/지형/수계 벡터 맵',
+    description: 'Protomaps PMTiles 전국 데이터(357MB, 줌 0~14 완비) 100% 완전 오프라인 전국 도로·건물·수계 벡터 맵',
     style: createPmtilesDarkStyle(),
   },
   {
     id: 'OFFLINE_PMTILES_LIGHT',
-    name: '💾 [오프라인 PMTiles] 대한민국 풀벡터 라이트 맵',
+    name: '💾 [오프라인 PMTiles] 대한민국 전국 풀벡터 라이트 맵',
     badge: 'OFFLINE',
-    description: 'Protomaps PMTiles 단일 파일(73MB) 기반 100% 완전 오프라인 고화질 컬러 벡터 맵',
+    description: 'Protomaps PMTiles 전국 데이터(357MB, 줌 0~14 완비) 100% 완전 오프라인 고화질 컬러 벡터 맵',
     style: createPmtilesLightStyle(),
   },
   {
