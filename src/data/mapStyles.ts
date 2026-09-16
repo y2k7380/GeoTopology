@@ -159,7 +159,7 @@ export const createOfflineOsmTileStyle = () => ({
       tiles: [`${getOrigin()}/tiles/osm/{z}/{x}/{y}.png`],
       tileSize: 256,
       attribution: '© OpenStreetMap Local Offline',
-      maxzoom: 12,
+      maxzoom: 10,
     },
   },
   layers: [
@@ -175,7 +175,7 @@ export const createOfflineOsmTileStyle = () => ({
       type: 'raster' as const,
       source: 'offline-osm-source',
       minzoom: 0,
-      maxzoom: 12,
+      maxzoom: 22,
     },
   ],
 });
@@ -190,7 +190,7 @@ export const createOfflineVoyagerTileStyle = () => ({
       tiles: [`${getOrigin()}/tiles/voyager/{z}/{x}/{y}.png`],
       tileSize: 256,
       attribution: '© CARTO Local Offline',
-      maxzoom: 12,
+      maxzoom: 10,
     },
   },
   layers: [
@@ -206,7 +206,7 @@ export const createOfflineVoyagerTileStyle = () => ({
       type: 'raster' as const,
       source: 'offline-voyager-source',
       minzoom: 0,
-      maxzoom: 12,
+      maxzoom: 22,
     },
   ],
 });
