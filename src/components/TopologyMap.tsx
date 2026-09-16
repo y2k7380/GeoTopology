@@ -92,6 +92,9 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     });
 
     mapRef.current = map;
+    (window as any).flyTo = (lng: number, lat: number, zoom = 10, pitch = 50) => {
+      map.flyTo({ center: [lng, lat], zoom, pitch, bearing: -10, duration: 1500 });
+    };
     overlayRef.current = overlay;
 
     return () => {
@@ -182,92 +185,97 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
 
     const layers: any[] = [];
 
-    // [Layer 0] 100% 완전 오프라인 내장 대한민국 3D 상세 벡터 지도 (GeoJSON & TextLayer)
-    if (currentMapStyle.startsWith('OFFLINE_VECTOR_')) {
-      const isLight = currentMapStyle === 'OFFLINE_VECTOR_LIGHT';
+    // [Layer 0] 100% 완전 오프라인 내장 상세 행정구역 경계선 및 한글 지명 텍스트 라벨 (Deck.gl 하이브리드 오버레이)
+    const isOfflineMode = currentMapStyle.startsWith('OFFLINE_');
+    if (isOfflineMode) {
+      const isLight = currentMapStyle === 'OFFLINE_VECTOR_LIGHT' || currentMapStyle === 'OFFLINE_PMTILES_LIGHT';
       const isCyber = currentMapStyle === 'OFFLINE_VECTOR_CYBER';
+      const isPureVector = currentMapStyle.startsWith('OFFLINE_VECTOR_');
 
-      // 0-1. 대한민국 17개 광역시도 베이스 육지 폴리곤 및 외곽 경계
-      layers.push(
-        new GeoJsonLayer({
-          id: 'korea-offline-provinces-base',
-          data: '/data/korea_provinces.json',
-          stroked: true,
-          filled: true,
-          extruded: false,
-          getFillColor: isLight
-            ? [241, 245, 249, 255] // 라이트 컬러 육지
-            : isCyber
-            ? [24, 18, 48, 255]   // 사이버펑크 퍼플 육지
-            : [19, 30, 54, 255],  // 다크 네이비 NMS 육지
-          getLineColor: isLight
-            ? [2, 132, 199, 240]  // 선명한 블루 외곽선
-            : isCyber
-            ? [168, 85, 247, 255] // 네온 퍼플 외곽선
-            : [6, 182, 212, 240], // 네온 사이안 외곽선
-          getLineWidth: 2.2,
-          lineWidthMinPixels: 2.0,
-          pickable: false,
-        })
-      );
+      // 0-1. 순수 벡터 모드일 때 대한민국 17개 광역시도 베이스 육지 폴리곤 및 외곽 경계
+      if (isPureVector) {
+        layers.push(
+          new GeoJsonLayer({
+            id: 'korea-offline-provinces-base',
+            data: '/data/korea_provinces.json',
+            stroked: true,
+            filled: true,
+            extruded: false,
+            getFillColor: isLight
+              ? [241, 245, 249, 255] // 라이트 컬러 육지
+              : isCyber
+              ? [24, 18, 48, 255]   // 사이버펑크 퍼플 육지
+              : [19, 30, 54, 255],  // 다크 네이비 NMS 육지
+            getLineColor: isLight
+              ? [2, 132, 199, 240]  // 선명한 블루 외곽선
+              : isCyber
+              ? [168, 85, 247, 255] // 네온 퍼플 외곽선
+              : [6, 182, 212, 240], // 네온 사이안 외곽선
+            getLineWidth: 2.2,
+            lineWidthMinPixels: 2.0,
+            pickable: false,
+          })
+        );
+      }
 
-      // 0-2. 대한민국 250개 시·군·구 상세 내부 행정 경계선
+      // 0-2. 대한민국 250개 시·군·구 상세 내부 행정 경계선 (모든 오프라인 모드 적용!)
       layers.push(
         new GeoJsonLayer({
           id: 'korea-offline-muni-borders',
           data: '/data/korea_municipalities.json',
           stroked: true,
           filled: false,
-          extruded: false,
           getLineColor: isLight
-            ? [148, 163, 184, 150] // 라이트 그레이 시군구 경계
+            ? [148, 163, 184, 160] // 라이트 그레이 시군구 경계
             : isCyber
-            ? [139, 92, 246, 130]  // 사이버 바이올렛 시군구 경계
-            : [56, 189, 248, 110], // 다크 네온 은은한 시군구 경계
-          getLineWidth: 1.0,
-          lineWidthMinPixels: 0.8,
+            ? [139, 92, 246, 140]  // 사이버 바이올렛 시군구 경계
+            : [56, 189, 248, 120], // 다크 네온 은은한 시군구 경계
+          getLineWidth: 1.2,
+          lineWidthMinPixels: 0.9,
           pickable: false,
         })
       );
 
-      // 0-3. 대한민국 주요 하천/수계 (한강, 낙동강, 금강, 영산강 등)
-      layers.push(
-        new GeoJsonLayer({
-          id: 'korea-offline-waterways',
-          data: '/data/korea_waterways.json',
-          stroked: true,
-          filled: true,
-          getLineColor: isLight
-            ? [56, 189, 248, 220]
-            : isCyber
-            ? [6, 182, 212, 220]
-            : [14, 165, 233, 220],
-          getFillColor: [14, 165, 233, 130],
-          getLineWidth: 2.5,
-          lineWidthMinPixels: 2.0,
-          pickable: false,
-        })
-      );
+      // 0-3. 대한민국 주요 하천/수계 (한강, 낙동강, 금강, 영산강 등 - 순수 벡터 모드)
+      if (isPureVector) {
+        layers.push(
+          new GeoJsonLayer({
+            id: 'korea-offline-waterways',
+            data: '/data/korea_waterways.json',
+            stroked: true,
+            filled: true,
+            getLineColor: isLight
+              ? [56, 189, 248, 220]
+              : isCyber
+              ? [6, 182, 212, 220]
+              : [14, 165, 233, 220],
+            getFillColor: [14, 165, 233, 130],
+            getLineWidth: 2.5,
+            lineWidthMinPixels: 2.0,
+            pickable: false,
+          })
+        );
 
-      // 0-4. 대한민국 주요 고속도로 및 간선 도로망
-      layers.push(
-        new GeoJsonLayer({
-          id: 'korea-offline-highways',
-          data: '/data/korea_roads.json',
-          stroked: true,
-          filled: false,
-          getLineColor: isLight
-            ? [249, 115, 22, 190] // 고속도로 앰버 오렌지
-            : isCyber
-            ? [236, 72, 153, 190] // 핫핑크 로드
-            : [245, 158, 11, 170], // 골드 앰버 고속도로
-          getLineWidth: 2.0,
-          lineWidthMinPixels: 1.5,
-          pickable: false,
-        })
-      );
+        // 0-4. 대한민국 주요 고속도로 및 간선 도로망
+        layers.push(
+          new GeoJsonLayer({
+            id: 'korea-offline-highways',
+            data: '/data/korea_roads.json',
+            stroked: true,
+            filled: false,
+            getLineColor: isLight
+              ? [249, 115, 22, 190]
+              : isCyber
+              ? [236, 72, 153, 190]
+              : [245, 158, 11, 170],
+            getLineWidth: 2.0,
+            lineWidthMinPixels: 1.5,
+            pickable: false,
+          })
+        );
+      }
 
-      // 0-5. 전국 주요 도시 및 시·군·구 지명 텍스트 라벨 (지도 배경 텍스트)
+      // 0-5. 전국 주요 도시 및 시·군·구 지명 텍스트 라벨 (모든 오프라인 모드 적용!)
       if (offlineCities.length > 0) {
         const visibleCities = currentZoom < 8.0
           ? offlineCities.filter(c => c.rank === 1) // 전국 광역 뷰: 거점 대도시
@@ -279,12 +287,12 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             data: visibleCities,
             getPosition: (d: any) => [d.lng, d.lat, 5],
             getText: (d: any) => d.name,
-            getSize: (d: any) => (d.rank === 1 ? (currentZoom < 8 ? 12 : 14) : 10),
+            getSize: (d: any) => (d.rank === 1 ? (currentZoom < 8 ? 13 : 15) : 11),
             getColor: isLight
-              ? [71, 85, 105, 210]
+              ? [30, 41, 59, 240]
               : isCyber
-              ? [216, 180, 254, 200]
-              : [148, 163, 184, 180],
+              ? [232, 200, 255, 240]
+              : [226, 232, 240, 230], // 선명한 화이트/슬레이트
             getTextAnchor: 'middle',
             getAlignmentBaseline: 'center',
             billboard: true,

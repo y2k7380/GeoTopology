@@ -30,33 +30,156 @@ const getOrigin = () => {
   return 'http://127.0.0.1:5173';
 };
 
-// [오프라인 PMTiles 1] Protomaps PMTiles 대한민국 단일 파일(73MB) 풀벡터 다크 맵
-export const createPmtilesDarkStyle = () => ({
-  version: 8 as const,
-  glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
-  sources: {
-    protomaps: {
-      type: 'vector' as const,
-      url: `pmtiles://${getOrigin()}/data/korea.pmtiles`,
-      attribution: '© OpenStreetMap contributors, © Protomaps Offline',
+// [오프라인 PMTiles 1] Protomaps PMTiles 대한민국 단일 파일(73MB) 풀벡터 다크 맵 (고대비 NMS 특화)
+export const createPmtilesDarkStyle = () => {
+  const rawLayers = (layers as any)('protomaps', 'dark', 'ko');
+  
+  // NMS 관제 센터에 최적화된 고대비 선명 컬러 팔레트 오버라이드
+  const enhancedLayers = rawLayers.map((l: any) => {
+    if (l.id === 'background') {
+      return { ...l, paint: { ...l.paint, 'background-color': '#090e1a' } }; // 깊은 네이비 다크 바다
+    }
+    if (l.id === 'earth') {
+      return { ...l, paint: { ...l.paint, 'fill-color': '#131c2e' } }; // 뚜렷한 관제 다크 육지
+    }
+    if (l.id.startsWith('water')) {
+      if (l.type === 'fill') {
+        return { ...l, paint: { ...l.paint, 'fill-color': '#0284c7', 'fill-opacity': 0.85 } }; // 선명한 한강/수계
+      }
+      if (l.type === 'line') {
+        return { ...l, paint: { ...l.paint, 'line-color': '#38bdf8', 'line-width': 2.0 } };
+      }
+    }
+    if (l.id.includes('park') || l.id === 'landcover') {
+      return { ...l, paint: { ...l.paint, 'fill-color': '#0d281e', 'fill-opacity': 0.6 } }; // 은은한 녹지
+    }
+    if (l.id.includes('highway') && l.type === 'line') {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#f59e0b', // 선명한 골드 앰버 고속도로
+          'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 4, 1.2, 8, 2.5, 12, 4.5, 16, 8],
+        },
+      };
+    }
+    if (l.id.includes('major') && l.type === 'line') {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#38bdf8', // 네온 사이안 주요 간선도로
+          'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 6, 0.8, 10, 2.0, 14, 4.0],
+        },
+      };
+    }
+    if (l.id.includes('minor') && l.type === 'line') {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#64748b', // 선명한 슬레이트 도심 도로
+          'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 10, 0.6, 14, 2.0],
+        },
+      };
+    }
+    if (l.id === 'boundaries' || l.id.startsWith('boundaries_')) {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#06b6d4', // 네온 청록 행정 경계선
+          'line-width': 1.8,
+          'line-opacity': 0.8,
+        },
+      };
+    }
+    return l;
+  });
+
+  return {
+    version: 8 as const,
+    glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+    sources: {
+      protomaps: {
+        type: 'vector' as const,
+        url: `pmtiles://${getOrigin()}/data/korea.pmtiles`,
+        attribution: '© OpenStreetMap contributors, © Protomaps Offline',
+      },
     },
-  },
-  layers: (layers as any)('protomaps', 'dark', 'ko'),
-});
+    layers: enhancedLayers,
+  };
+};
 
 // [오프라인 PMTiles 2] Protomaps PMTiles 대한민국 단일 파일(73MB) 풀벡터 라이트 맵
-export const createPmtilesLightStyle = () => ({
-  version: 8 as const,
-  glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
-  sources: {
-    protomaps: {
-      type: 'vector' as const,
-      url: `pmtiles://${getOrigin()}/data/korea.pmtiles`,
-      attribution: '© OpenStreetMap contributors, © Protomaps Offline',
+export const createPmtilesLightStyle = () => {
+  const rawLayers = (layers as any)('protomaps', 'light', 'ko');
+
+  const enhancedLayers = rawLayers.map((l: any) => {
+    if (l.id === 'background') {
+      return { ...l, paint: { ...l.paint, 'background-color': '#bae6fd' } }; // 시원한 연하늘 바다
+    }
+    if (l.id === 'earth') {
+      return { ...l, paint: { ...l.paint, 'fill-color': '#f8fafc' } }; // 깔끔한 화이트/크림 육지
+    }
+    if (l.id.startsWith('water')) {
+      if (l.type === 'fill') {
+        return { ...l, paint: { ...l.paint, 'fill-color': '#0284c7', 'fill-opacity': 0.9 } }; // 청명한 블루 수계
+      }
+      if (l.type === 'line') {
+        return { ...l, paint: { ...l.paint, 'line-color': '#0369a1', 'line-width': 2.0 } };
+      }
+    }
+    if (l.id.includes('park') || l.id === 'landcover') {
+      return { ...l, paint: { ...l.paint, 'fill-color': '#dcfce7', 'fill-opacity': 0.7 } }; // 파스텔 에메랄드 녹지
+    }
+    if (l.id.includes('highway') && l.type === 'line') {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#ea580c', // 선명한 오렌지 고속도로
+          'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 4, 1.2, 8, 2.5, 12, 4.5, 16, 8],
+        },
+      };
+    }
+    if (l.id.includes('major') && l.type === 'line') {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#0284c7', // 딥 사이안 간선도로
+          'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 6, 0.8, 10, 2.0, 14, 4.0],
+        },
+      };
+    }
+    if (l.id === 'boundaries' || l.id.startsWith('boundaries_')) {
+      return {
+        ...l,
+        paint: {
+          ...l.paint,
+          'line-color': '#0284c7',
+          'line-width': 1.8,
+          'line-opacity': 0.85,
+        },
+      };
+    }
+    return l;
+  });
+
+  return {
+    version: 8 as const,
+    glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+    sources: {
+      protomaps: {
+        type: 'vector' as const,
+        url: `pmtiles://${getOrigin()}/data/korea.pmtiles`,
+        attribution: '© OpenStreetMap contributors, © Protomaps Offline',
+      },
     },
-  },
-  layers: (layers as any)('protomaps', 'light', 'ko'),
-});
+    layers: enhancedLayers,
+  };
+};
 
 // [오프라인 1] 100% 완전 오프라인 내장 대한민국 3D 다크 벡터 맵 (NMS 관제 특화)
 export const createOfflineVectorDarkStyle = () => ({
