@@ -1,26 +1,162 @@
-// 다양한 100% 무료 지도 타일 스타일 정의 (API Key 불필요)
+// 다양한 100% 무료 온라인 지도 및 100% 로컬 내장 오프라인 벡터 지도 스타일 정의
 
-export type MapStyleType = 'OSM_STANDARD' | 'CARTO_VOYAGER' | 'CARTO_DARK' | 'SATELLITE_FREE';
+export type MapStyleType = 
+  | 'OFFLINE_VECTOR_DARK'
+  | 'OFFLINE_VECTOR_LIGHT'
+  | 'OFFLINE_VECTOR_CYBER'
+  | 'OSM_STANDARD'
+  | 'CARTO_VOYAGER'
+  | 'CARTO_DARK'
+  | 'SATELLITE_FREE';
 
 export interface MapStyleOption {
   id: MapStyleType;
   name: string;
+  badge: 'OFFLINE' | 'ONLINE';
   description: string;
   style: any;
 }
 
-// 1. OpenStreetMap (OSM) 표준 무료 지도 (한글 지명, 도로망, 행정구역 선명)
+const getOrigin = () => {
+  if (typeof window !== 'undefined' && window.location && window.location.origin) {
+    return window.location.origin;
+  }
+  return 'http://127.0.0.1:5173';
+};
+
+// [오프라인 1] 100% 완전 오프라인 내장 대한민국 3D 다크 벡터 맵 (NMS 관제 특화)
+export const createOfflineVectorDarkStyle = () => ({
+  version: 8 as const,
+  name: 'Offline Korea Vector Dark',
+  sources: {
+    'korea-provinces': {
+      type: 'geojson' as const,
+      data: `${getOrigin()}/data/korea_provinces.json`,
+    },
+  },
+  layers: [
+    // 바다 배경
+    {
+      id: 'background',
+      type: 'background' as const,
+      paint: {
+        'background-color': '#080d1a',
+      },
+    },
+    // 대한민국 육지 폴리곤 (다크 슬레이트)
+    {
+      id: 'provinces-fill',
+      type: 'fill' as const,
+      source: 'korea-provinces',
+      paint: {
+        'fill-color': '#131e36',
+        'fill-opacity': 0.95,
+      },
+    },
+    // 17개 광역시도 경계선 (네온 청록색 글로우 라인)
+    {
+      id: 'provinces-line',
+      type: 'line' as const,
+      source: 'korea-provinces',
+      paint: {
+        'line-color': '#06b6d4',
+        'line-width': 1.8,
+        'line-opacity': 0.8,
+      },
+    },
+  ],
+});
+
+// [오프라인 2] 100% 완전 오프라인 내장 대한민국 3D 라이트/컬러 벡터 맵
+export const createOfflineVectorLightStyle = () => ({
+  version: 8 as const,
+  name: 'Offline Korea Vector Light',
+  sources: {
+    'korea-provinces': {
+      type: 'geojson' as const,
+      data: `${getOrigin()}/data/korea_provinces.json`,
+    },
+  },
+  layers: [
+    {
+      id: 'background',
+      type: 'background' as const,
+      paint: {
+        'background-color': '#cbd5e1', // 밝은 바다
+      },
+    },
+    {
+      id: 'provinces-fill',
+      type: 'fill' as const,
+      source: 'korea-provinces',
+      paint: {
+        'fill-color': '#f8fafc', // 깔끔한 화이트/크림 육지
+        'fill-opacity': 0.95,
+      },
+    },
+    {
+      id: 'provinces-line',
+      type: 'line' as const,
+      source: 'korea-provinces',
+      paint: {
+        'line-color': '#0284c7',
+        'line-width': 1.8,
+        'line-opacity': 0.85,
+      },
+    },
+  ],
+});
+
+// [오프라인 3] 100% 완전 오프라인 내장 대한민국 3D 사이버펑크 네온 맵
+export const createOfflineVectorCyberStyle = () => ({
+  version: 8 as const,
+  name: 'Offline Korea Vector Cyberpunk',
+  sources: {
+    'korea-provinces': {
+      type: 'geojson' as const,
+      data: `${getOrigin()}/data/korea_provinces.json`,
+    },
+  },
+  layers: [
+    {
+      id: 'background',
+      type: 'background' as const,
+      paint: {
+        'background-color': '#05050d', // 깊은 우주 암흑 바다
+      },
+    },
+    {
+      id: 'provinces-fill',
+      type: 'fill' as const,
+      source: 'korea-provinces',
+      paint: {
+        'fill-color': '#110e24', // 다크 퍼플 육지
+        'fill-opacity': 0.95,
+      },
+    },
+    {
+      id: 'provinces-line',
+      type: 'line' as const,
+      source: 'korea-provinces',
+      paint: {
+        'line-color': '#a855f7', // 네온 바이올렛 라인
+        'line-width': 2.0,
+        'line-opacity': 0.9,
+      },
+    },
+  ],
+});
+
+// [온라인 1] OpenStreetMap 표준 무료 지도
 export const OSM_STANDARD_STYLE = {
   version: 8 as const,
   name: 'OpenStreetMap Standard Free',
   sources: {
     'osm-tiles': {
       type: 'raster' as const,
-      tiles: [
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      ],
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      attribution: '© OpenStreetMap contributors',
       maxzoom: 19,
     },
   },
@@ -35,7 +171,7 @@ export const OSM_STANDARD_STYLE = {
   ],
 };
 
-// 2. CartoDB Voyager (고화질 컬러 도로/지형 무료 지도)
+// [온라인 2] CartoDB Voyager 온라인 컬러 지도
 export const CARTO_VOYAGER_STYLE = {
   version: 8 as const,
   name: 'CartoDB Voyager Free',
@@ -63,7 +199,7 @@ export const CARTO_VOYAGER_STYLE = {
   ],
 };
 
-// 3. CartoDB Dark Matter (다크 테마 무료 지도)
+// [온라인 3] CartoDB Dark Matter 온라인 다크 맵
 export const CARTO_DARK_MAP_STYLE = {
   version: 8 as const,
   name: 'Carto Dark Matter Free',
@@ -74,7 +210,6 @@ export const CARTO_DARK_MAP_STYLE = {
         'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
         'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
         'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
       ],
       tileSize: 256,
       attribution: '© OpenStreetMap, © CARTO',
@@ -92,7 +227,7 @@ export const CARTO_DARK_MAP_STYLE = {
   ],
 };
 
-// 4. ESRI 무료 위성 사진 지도
+// [온라인 4] ESRI 무료 위성 사진 지도
 export const SATELLITE_FREE_STYLE = {
   version: 8 as const,
   name: 'Free Satellite Imagery',
@@ -120,27 +255,52 @@ export const SATELLITE_FREE_STYLE = {
 
 export const FREE_MAP_OPTIONS: MapStyleOption[] = [
   {
+    id: 'OFFLINE_VECTOR_DARK',
+    name: '💾 [오프라인] 대한민국 3D 다크 벡터 맵',
+    badge: 'OFFLINE',
+    description: '100% 완전 오프라인 폐쇄망 구동 (대한민국 17개 광역시도 정밀 벡터 경계)',
+    style: createOfflineVectorDarkStyle(),
+  },
+  {
+    id: 'OFFLINE_VECTOR_LIGHT',
+    name: '💾 [오프라인] 대한민국 3D 라이트 벡터 맵',
+    badge: 'OFFLINE',
+    description: '100% 완전 오프라인 폐쇄망 구동 (주간 고화질 컬러 벡터 경계)',
+    style: createOfflineVectorLightStyle(),
+  },
+  {
+    id: 'OFFLINE_VECTOR_CYBER',
+    name: '💾 [오프라인] 대한민국 사이버 네온 맵',
+    badge: 'OFFLINE',
+    description: '100% 완전 오프라인 폐쇄망 구동 (사이버펑크 네온 보라빛 테마)',
+    style: createOfflineVectorCyberStyle(),
+  },
+  {
     id: 'OSM_STANDARD',
-    name: 'OpenStreetMap (표준 무료 지도)',
-    description: '도로망, 건물, 한글 지명이 선명한 오픈스트리트맵 표준',
+    name: '🌐 [온라인] OpenStreetMap 표준',
+    badge: 'ONLINE',
+    description: '실시간 OSM CDN 타일 연동 표준 무료 지도 (도로망 및 한글 지명)',
     style: OSM_STANDARD_STYLE,
   },
   {
     id: 'CARTO_VOYAGER',
-    name: 'Carto Voyager (컬러 지도)',
-    description: '고해상도 지형 및 도로 시각화 컬러 맵',
+    name: '🌐 [온라인] Carto Voyager 컬러',
+    badge: 'ONLINE',
+    description: '실시간 CartoDB 고해상도 컬러 도로/지형 지도',
     style: CARTO_VOYAGER_STYLE,
   },
   {
     id: 'CARTO_DARK',
-    name: 'Carto Dark (다크 관제 맵)',
-    description: '야간/관제 센터에 최적화된 다크 테마',
+    name: '🌐 [온라인] Carto Dark 다크 맵',
+    badge: 'ONLINE',
+    description: '실시간 CartoDB 야간 다크 관제 센터 지도',
     style: CARTO_DARK_MAP_STYLE,
   },
   {
     id: 'SATELLITE_FREE',
-    name: '무료 위성 사진 (Satellite)',
-    description: '실제 위성 항공 지형 사진',
+    name: '🛰️ [온라인] 무료 위성 사진 (Satellite)',
+    badge: 'ONLINE',
+    description: '실제 항공/위성 사진 지형 맵',
     style: SATELLITE_FREE_STYLE,
   },
 ];

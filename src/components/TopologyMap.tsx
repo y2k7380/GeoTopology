@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { ArcLayer, ColumnLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers';
+import { ArcLayer, ColumnLayer, ScatterplotLayer, TextLayer, GeoJsonLayer } from '@deck.gl/layers';
 import { FREE_MAP_OPTIONS } from '../data/mapStyles';
 import type { MapStyleType } from '../data/mapStyles';
 import type { NetworkNode, NetworkEdge, RegionSummaryNode, AlarmSeverity, LabelConfig } from '../types/topology';
@@ -157,6 +157,35 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     }
 
     const layers: any[] = [];
+
+    // [Layer 0] 100% 완전 오프라인 내장 대한민국 3D 벡터 지도 (GeoJSON)
+    if (currentMapStyle.startsWith('OFFLINE_VECTOR_')) {
+      const isLight = currentMapStyle === 'OFFLINE_VECTOR_LIGHT';
+      const isCyber = currentMapStyle === 'OFFLINE_VECTOR_CYBER';
+
+      layers.push(
+        new GeoJsonLayer({
+          id: 'korea-offline-base-geojson',
+          data: '/data/korea_provinces.json',
+          stroked: true,
+          filled: true,
+          extruded: false,
+          getFillColor: isLight
+            ? [241, 245, 249, 255] // 라이트 컬러 육지
+            : isCyber
+            ? [24, 18, 48, 255]   // 사이버펑크 퍼플 육지
+            : [19, 30, 54, 255],  // 다크 네이비 NMS 육지
+          getLineColor: isLight
+            ? [2, 132, 199, 230]  // 선명한 블루 경계선
+            : isCyber
+            ? [168, 85, 247, 255] // 네온 퍼플 경계선
+            : [6, 182, 212, 230], // 네온 사이안 경계선
+          getLineWidth: 2,
+          lineWidthMinPixels: 1.8,
+          pickable: false,
+        })
+      );
+    }
 
     // [Layer A-1] 3D Arc 회선 외곽선 (Black Outline Shadow for High Contrast on Any Map)
     if (filteredEdges.length > 0) {
@@ -334,6 +363,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
           background: true,
           getBackgroundColor: [15, 23, 42, 210],
           backgroundPadding: [6, 4, 6, 4],
+          characterSet: 'auto',
         })
       );
     }
@@ -437,6 +467,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
               background: true,
               getBackgroundColor: [15, 23, 42, 230],
               backgroundPadding: [8, 4, 8, 4],
+              characterSet: 'auto',
             })
           );
         }
@@ -491,6 +522,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
           background: true,
           getBackgroundColor: [15, 23, 42, 220],
           backgroundPadding: [4, 2, 4, 2],
+          characterSet: 'auto',
         })
       );
     }
