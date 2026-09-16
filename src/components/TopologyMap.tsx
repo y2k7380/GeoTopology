@@ -45,6 +45,15 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     type: 'summary' | 'device' | 'edge';
   } | null>(null);
 
+  const [offlineCities, setOfflineCities] = useState<{ name: string; lng: number; lat: number; rank: number }[]>([]);
+
+  useEffect(() => {
+    fetch('/data/korea_cities.json')
+      .then(r => r.json())
+      .then(data => setOfflineCities(data))
+      .catch(() => {});
+  }, []);
+
   // 1. 맵 및 MapboxOverlay 초기화
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -158,14 +167,15 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
 
     const layers: any[] = [];
 
-    // [Layer 0] 100% 완전 오프라인 내장 대한민국 3D 벡터 지도 (GeoJSON)
+    // [Layer 0] 100% 완전 오프라인 내장 대한민국 3D 상세 벡터 지도 (GeoJSON & TextLayer)
     if (currentMapStyle.startsWith('OFFLINE_VECTOR_')) {
       const isLight = currentMapStyle === 'OFFLINE_VECTOR_LIGHT';
       const isCyber = currentMapStyle === 'OFFLINE_VECTOR_CYBER';
 
+      // 0-1. 대한민국 17개 광역시도 베이스 육지 폴리곤 및 외곽 경계
       layers.push(
         new GeoJsonLayer({
-          id: 'korea-offline-base-geojson',
+          id: 'korea-offline-provinces-base',
           data: '/data/korea_provinces.json',
           stroked: true,
           filled: true,
@@ -176,15 +186,102 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             ? [24, 18, 48, 255]   // 사이버펑크 퍼플 육지
             : [19, 30, 54, 255],  // 다크 네이비 NMS 육지
           getLineColor: isLight
-            ? [2, 132, 199, 230]  // 선명한 블루 경계선
+            ? [2, 132, 199, 240]  // 선명한 블루 외곽선
             : isCyber
-            ? [168, 85, 247, 255] // 네온 퍼플 경계선
-            : [6, 182, 212, 230], // 네온 사이안 경계선
-          getLineWidth: 2,
-          lineWidthMinPixels: 1.8,
+            ? [168, 85, 247, 255] // 네온 퍼플 외곽선
+            : [6, 182, 212, 240], // 네온 사이안 외곽선
+          getLineWidth: 2.2,
+          lineWidthMinPixels: 2.0,
           pickable: false,
         })
       );
+
+      // 0-2. 대한민국 250개 시·군·구 상세 내부 행정 경계선
+      layers.push(
+        new GeoJsonLayer({
+          id: 'korea-offline-muni-borders',
+          data: '/data/korea_municipalities.json',
+          stroked: true,
+          filled: false,
+          extruded: false,
+          getLineColor: isLight
+            ? [148, 163, 184, 150] // 라이트 그레이 시군구 경계
+            : isCyber
+            ? [139, 92, 246, 130]  // 사이버 바이올렛 시군구 경계
+            : [56, 189, 248, 110], // 다크 네온 은은한 시군구 경계
+          getLineWidth: 1.0,
+          lineWidthMinPixels: 0.8,
+          pickable: false,
+        })
+      );
+
+      // 0-3. 대한민국 주요 하천/수계 (한강, 낙동강, 금강, 영산강 등)
+      layers.push(
+        new GeoJsonLayer({
+          id: 'korea-offline-waterways',
+          data: '/data/korea_waterways.json',
+          stroked: true,
+          filled: true,
+          getLineColor: isLight
+            ? [56, 189, 248, 220]
+            : isCyber
+            ? [6, 182, 212, 220]
+            : [14, 165, 233, 220],
+          getFillColor: [14, 165, 233, 130],
+          getLineWidth: 2.5,
+          lineWidthMinPixels: 2.0,
+          pickable: false,
+        })
+      );
+
+      // 0-4. 대한민국 주요 고속도로 및 간선 도로망
+      layers.push(
+        new GeoJsonLayer({
+          id: 'korea-offline-highways',
+          data: '/data/korea_roads.json',
+          stroked: true,
+          filled: false,
+          getLineColor: isLight
+            ? [249, 115, 22, 190] // 고속도로 앰버 오렌지
+            : isCyber
+            ? [236, 72, 153, 190] // 핫핑크 로드
+            : [245, 158, 11, 170], // 골드 앰버 고속도로
+          getLineWidth: 2.0,
+          lineWidthMinPixels: 1.5,
+          pickable: false,
+        })
+      );
+
+      // 0-5. 전국 주요 도시 및 시·군·구 지명 텍스트 라벨 (지도 배경 텍스트)
+      if (offlineCities.length > 0) {
+        const visibleCities = currentZoom < 8.0
+          ? offlineCities.filter(c => c.rank === 1) // 전국 광역 뷰: 거점 대도시
+          : offlineCities; // 줌인 뷰: 250개 시군구 전체 표시
+
+        layers.push(
+          new TextLayer({
+            id: 'korea-offline-city-labels',
+            data: visibleCities,
+            getPosition: (d: any) => [d.lng, d.lat, 5],
+            getText: (d: any) => d.name,
+            getSize: (d: any) => (d.rank === 1 ? (currentZoom < 8 ? 12 : 14) : 10),
+            getColor: isLight
+              ? [71, 85, 105, 210]
+              : isCyber
+              ? [216, 180, 254, 200]
+              : [148, 163, 184, 180],
+            getTextAnchor: 'middle',
+            getAlignmentBaseline: 'center',
+            billboard: true,
+            fontFamily: 'Pretendard, -apple-system, sans-serif',
+            fontWeight: 600,
+            characterSet: 'auto',
+            background: true,
+            getBackgroundColor: isLight ? [255, 255, 255, 150] : [15, 23, 42, 150],
+            backgroundPadding: [3, 1, 3, 1],
+          })
+        );
+      }
     }
 
     // [Layer A-1] 3D Arc 회선 외곽선 (Black Outline Shadow for High Contrast on Any Map)
@@ -545,7 +642,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     }
 
     overlayRef.current.setProps({ layers });
-  }, [allNodes, allEdges, currentZoom, filterSeverity, getSeverityColor, onSelectNode, selectedNode, labelConfig]);
+  }, [allNodes, allEdges, currentZoom, filterSeverity, getSeverityColor, onSelectNode, selectedNode, labelConfig, currentMapStyle, offlineCities]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
