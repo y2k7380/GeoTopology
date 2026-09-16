@@ -4,6 +4,8 @@ export type MapStyleType =
   | 'OFFLINE_VECTOR_DARK'
   | 'OFFLINE_VECTOR_LIGHT'
   | 'OFFLINE_VECTOR_CYBER'
+  | 'OFFLINE_TILE_OSM'
+  | 'OFFLINE_TILE_VOYAGER'
   | 'OSM_STANDARD'
   | 'CARTO_VOYAGER'
   | 'CARTO_DARK'
@@ -147,6 +149,68 @@ export const createOfflineVectorCyberStyle = () => ({
   ],
 });
 
+// [오프라인 4] 100% 로컬 내장 OpenStreetMap 래스터 타일 지도
+export const createOfflineOsmTileStyle = () => ({
+  version: 8 as const,
+  name: 'Offline Local OSM Tiles',
+  sources: {
+    'offline-osm-source': {
+      type: 'raster' as const,
+      tiles: [`${getOrigin()}/tiles/osm/{z}/{x}/{y}.png`],
+      tileSize: 256,
+      attribution: '© OpenStreetMap Local Offline',
+      maxzoom: 12,
+    },
+  },
+  layers: [
+    {
+      id: 'background',
+      type: 'background' as const,
+      paint: {
+        'background-color': '#0f172a',
+      },
+    },
+    {
+      id: 'offline-osm-layer',
+      type: 'raster' as const,
+      source: 'offline-osm-source',
+      minzoom: 0,
+      maxzoom: 12,
+    },
+  ],
+});
+
+// [오프라인 5] 100% 로컬 내장 Carto Voyager 래스터 타일 지도
+export const createOfflineVoyagerTileStyle = () => ({
+  version: 8 as const,
+  name: 'Offline Local Voyager Tiles',
+  sources: {
+    'offline-voyager-source': {
+      type: 'raster' as const,
+      tiles: [`${getOrigin()}/tiles/voyager/{z}/{x}/{y}.png`],
+      tileSize: 256,
+      attribution: '© CARTO Local Offline',
+      maxzoom: 12,
+    },
+  },
+  layers: [
+    {
+      id: 'background',
+      type: 'background' as const,
+      paint: {
+        'background-color': '#e2e8f0',
+      },
+    },
+    {
+      id: 'offline-voyager-layer',
+      type: 'raster' as const,
+      source: 'offline-voyager-source',
+      minzoom: 0,
+      maxzoom: 12,
+    },
+  ],
+});
+
 // [온라인 1] OpenStreetMap 표준 무료 지도
 export const OSM_STANDARD_STYLE = {
   version: 8 as const,
@@ -274,6 +338,20 @@ export const FREE_MAP_OPTIONS: MapStyleOption[] = [
     badge: 'OFFLINE',
     description: '100% 완전 오프라인 폐쇄망 구동 (사이버펑크 네온 보라빛 테마)',
     style: createOfflineVectorCyberStyle(),
+  },
+  {
+    id: 'OFFLINE_TILE_OSM',
+    name: '💾 [오프라인] 로컬 캐시 OSM 타일 맵',
+    badge: 'OFFLINE',
+    description: '100% 로컬 내장(public/tiles/osm) 오픈스트리트맵 타일',
+    style: createOfflineOsmTileStyle(),
+  },
+  {
+    id: 'OFFLINE_TILE_VOYAGER',
+    name: '💾 [오프라인] 로컬 캐시 보이저 타일 맵',
+    badge: 'OFFLINE',
+    description: '100% 로컬 내장(public/tiles/voyager) 카토 보이저 타일',
+    style: createOfflineVoyagerTileStyle(),
   },
   {
     id: 'OSM_STANDARD',
