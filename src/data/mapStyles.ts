@@ -4,8 +4,8 @@ export type MapStyleType =
   | 'OFFLINE_VECTOR_DARK'
   | 'OFFLINE_VECTOR_LIGHT'
   | 'OFFLINE_VECTOR_CYBER'
-  | 'OFFLINE_TILE_OSM'
-  | 'OFFLINE_TILE_VOYAGER'
+  | 'OFFLINE_TILE_STREET'
+  | 'OFFLINE_TILE_TOPO'
   | 'OSM_STANDARD'
   | 'CARTO_VOYAGER'
   | 'CARTO_DARK'
@@ -149,17 +149,17 @@ export const createOfflineVectorCyberStyle = () => ({
   ],
 });
 
-// [오프라인 4] 100% 로컬 내장 OpenStreetMap 래스터 타일 지도
-export const createOfflineOsmTileStyle = () => ({
+// [오프라인 4] 100% 로컬 내장 실제 고화질 상세 스트리트 맵 (줌 5~13 수록)
+export const createOfflineStreetTileStyle = () => ({
   version: 8 as const,
-  name: 'Offline Local OSM Tiles',
+  name: 'Offline Local Detailed Street Map',
   sources: {
-    'offline-osm-source': {
+    'offline-street-source': {
       type: 'raster' as const,
-      tiles: [`${getOrigin()}/tiles/osm/{z}/{x}/{y}.png`],
+      tiles: [`${getOrigin()}/tiles/street/{z}/{x}/{y}.jpg`],
       tileSize: 256,
-      attribution: '© OpenStreetMap Local Offline',
-      maxzoom: 10,
+      attribution: '© ESRI World Street Map Offline',
+      maxzoom: 13,
     },
   },
   layers: [
@@ -167,30 +167,30 @@ export const createOfflineOsmTileStyle = () => ({
       id: 'background',
       type: 'background' as const,
       paint: {
-        'background-color': '#0f172a',
+        'background-color': '#f8fafc',
       },
     },
     {
-      id: 'offline-osm-layer',
+      id: 'offline-street-layer',
       type: 'raster' as const,
-      source: 'offline-osm-source',
+      source: 'offline-street-source',
       minzoom: 0,
       maxzoom: 22,
     },
   ],
 });
 
-// [오프라인 5] 100% 로컬 내장 Carto Voyager 래스터 타일 지도
-export const createOfflineVoyagerTileStyle = () => ({
+// [오프라인 5] 100% 로컬 내장 실제 고화질 상세 지형 맵 (줌 5~13 수록)
+export const createOfflineTopoTileStyle = () => ({
   version: 8 as const,
-  name: 'Offline Local Voyager Tiles',
+  name: 'Offline Local Detailed Topo Map',
   sources: {
-    'offline-voyager-source': {
+    'offline-topo-source': {
       type: 'raster' as const,
-      tiles: [`${getOrigin()}/tiles/voyager/{z}/{x}/{y}.png`],
+      tiles: [`${getOrigin()}/tiles/topo/{z}/{x}/{y}.jpg`],
       tileSize: 256,
-      attribution: '© CARTO Local Offline',
-      maxzoom: 10,
+      attribution: '© ESRI World Topo Map Offline',
+      maxzoom: 13,
     },
   },
   layers: [
@@ -202,9 +202,9 @@ export const createOfflineVoyagerTileStyle = () => ({
       },
     },
     {
-      id: 'offline-voyager-layer',
+      id: 'offline-topo-layer',
       type: 'raster' as const,
-      source: 'offline-voyager-source',
+      source: 'offline-topo-source',
       minzoom: 0,
       maxzoom: 22,
     },
@@ -340,18 +340,18 @@ export const FREE_MAP_OPTIONS: MapStyleOption[] = [
     style: createOfflineVectorCyberStyle(),
   },
   {
-    id: 'OFFLINE_TILE_OSM',
-    name: '💾 [오프라인] 로컬 캐시 OSM 타일 맵',
+    id: 'OFFLINE_TILE_STREET',
+    name: '💾 [오프라인] 로컬 상세 스트리트 맵',
     badge: 'OFFLINE',
-    description: '100% 로컬 내장(public/tiles/osm) 오픈스트리트맵 타일',
-    style: createOfflineOsmTileStyle(),
+    description: '100% 로컬 내장(public/tiles/street) 상세 도로/도시 타일 (줌 5~13 수록)',
+    style: createOfflineStreetTileStyle(),
   },
   {
-    id: 'OFFLINE_TILE_VOYAGER',
-    name: '💾 [오프라인] 로컬 캐시 보이저 타일 맵',
+    id: 'OFFLINE_TILE_TOPO',
+    name: '💾 [오프라인] 로컬 상세 지형 맵 (Topo)',
     badge: 'OFFLINE',
-    description: '100% 로컬 내장(public/tiles/voyager) 카토 보이저 타일',
-    style: createOfflineVoyagerTileStyle(),
+    description: '100% 로컬 내장(public/tiles/topo) 국토 지형/등고선 타일 (줌 5~13 수록)',
+    style: createOfflineTopoTileStyle(),
   },
   {
     id: 'OSM_STANDARD',
