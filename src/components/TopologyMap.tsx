@@ -13,7 +13,7 @@ maplibregl.setWorkerUrl(workerUrl);
 const pmtilesProtocol = new pmtiles.Protocol();
 maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
 import type { MapStyleType } from '../data/mapStyles';
-import type { NetworkNode, NetworkEdge, RegionSummaryNode, AlarmSeverity, LabelConfig } from '../types/topology';
+import type { NetworkNode, NetworkEdge, RegionSummaryNode, AlarmSeverity, LabelConfig, LayerVisibilityConfig } from '../types/topology';
 import type { ClusteredTopologyResult } from '../utils/summaryEngine';
 import { computeHierarchicalTopology } from '../utils/summaryEngine';
 
@@ -28,6 +28,8 @@ interface TopologyMapProps {
   filterSeverity: AlarmSeverity | 'ALL';
   currentMapStyle: MapStyleType;
   labelConfig: LabelConfig;
+  layerConfig: LayerVisibilityConfig;
+  onZoomChange?: (zoom: number) => void;
 }
 
 export const TopologyMap: React.FC<TopologyMapProps> = ({
@@ -41,6 +43,8 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
   filterSeverity,
   currentMapStyle,
   labelConfig,
+  layerConfig,
+  onZoomChange,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -94,7 +98,9 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     map.addControl(overlay as any);
 
     map.on('zoom', () => {
-      setCurrentZoom(map.getZoom());
+      const z = map.getZoom();
+      setCurrentZoom(z);
+      onZoomChange?.(z);
     });
 
     mapRef.current = map;
@@ -198,90 +204,112 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
       const isCyber = currentMapStyle === 'OFFLINE_VECTOR_CYBER';
       const isPureVector = currentMapStyle.startsWith('OFFLINE_VECTOR_');
 
-      // 0-1. 대한민국 17개 광역시도 외곽 경계선 (순수 벡터일 때는 육지 채움, PMTiles일 때는 경계선 오버레이)
-      layers.push(
-        new GeoJsonLayer({
-          id: 'korea-offline-provinces-base',
-          data: '/data/korea_provinces.json',
-          stroked: true,
-          filled: isPureVector,
-          extruded: false,
-          getFillColor: isLight
-            ? [241, 245, 249, 255]
-            : isCyber
-            ? [24, 18, 48, 255]
-            : [19, 30, 54, 255],
-          getLineColor: isLight
-            ? [2, 132, 199, 240]
-            : isCyber
-            ? [168, 85, 247, 255]
-            : [6, 182, 212, 240], // 네온 청록 광역시도 경계선
-          getLineWidth: 2.5,
-          lineWidthMinPixels: 2.0,
-          pickable: false,
-        })
-      );
+      // 0-1. 대한민국 17개 광역시도 외곽 경계선
+      if (layerConfig.showProvinceBorders) {
+        layers.push(
+          new GeoJsonLayer({
+            id: 'korea-offline-provinces-base',
+            data: '/data/korea_provinces.json',
+            stroked: true,
+            filled: isPureVector,
+            extruded: false,
+            getFillColor: isLight
+              ? [241, 245, 249, 255]
+              : isCyber
+              ? [24, 18, 48, 255]
+              : [19, 30, 54, 255],
+            getLineColor: isLight
+              ? [2, 132, 199, 240]
+              : isCyber
+              ? [168, 85, 247, 255]
+              : [6, 182, 212, 240], // 네온 청록 광역시도 경계선
+            getLineWidth: currentZoom < 6.8 ? 1.8 : 2.5,
+            lineWidthMinPixels: 1.5,
+            pickable: false,
+          })
+        );
+      }
 
       // 0-2. 대한민국 250개 시·군·구 상세 내부 행정 경계선
-      layers.push(
-        new GeoJsonLayer({
-          id: 'korea-offline-muni-borders',
-          data: '/data/korea_municipalities.json',
-          stroked: true,
-          filled: false,
-          getLineColor: isLight
-            ? [148, 163, 184, 170]
-            : isCyber
-            ? [139, 92, 246, 150]
-            : [56, 189, 248, 130],
-          getLineWidth: 1.2,
-          lineWidthMinPixels: 0.9,
-          pickable: false,
-        })
-      );
+      // (스마트 LOD: 전도 뷰 줌 < 7.5에서는 감추어 조잡함을 방지하고, 줌인 시에만 부드럽게 표출)
+      const shouldShowMuni = layerConfig.showMuniBorders && (layerConfig.lodMode === 'ALWAYS_FULL' || currentZoom >= 7.5);
+      if (shouldShowMuni) {
+        layers.push(
+          new GeoJsonLayer({
+            id: 'korea-offline-muni-borders',
+            data: '/data/korea_municipalities.json',
+            stroked: true,
+            filled: false,
+            getLineColor: isLight
+              ? [148, 163, 184, 150]
+              : isCyber
+              ? [139, 92, 246, 130]
+              : [56, 189, 248, 120],
+            getLineWidth: 1.0,
+            lineWidthMinPixels: 0.8,
+            pickable: false,
+          })
+        );
+      }
 
       // 0-3. 대한민국 주요 하천/수계 (한강, 낙동강, 금강, 영산강 및 주요 호수)
-      layers.push(
-        new GeoJsonLayer({
-          id: 'korea-offline-waterways',
-          data: '/data/korea_waterways.json',
-          stroked: true,
-          filled: true,
-          getLineColor: isLight
-            ? [56, 189, 248, 230]
-            : isCyber
-            ? [6, 182, 212, 230]
-            : [14, 165, 233, 230],
-          getFillColor: [14, 165, 233, 140],
-          getLineWidth: 2.5,
-          lineWidthMinPixels: 2.0,
-          pickable: false,
-        })
-      );
+      if (layerConfig.showWaterways) {
+        layers.push(
+          new GeoJsonLayer({
+            id: 'korea-offline-waterways',
+            data: '/data/korea_waterways.json',
+            stroked: true,
+            filled: true,
+            getLineColor: isLight
+              ? [56, 189, 248, 200]
+              : isCyber
+              ? [6, 182, 212, 200]
+              : [14, 165, 233, 200],
+            getFillColor: [14, 165, 233, currentZoom < 6.8 ? 80 : 130],
+            getLineWidth: currentZoom < 6.8 ? 1.5 : 2.2,
+            lineWidthMinPixels: 1.2,
+            pickable: false,
+          })
+        );
+      }
 
       // 0-4. 대한민국 전국 주요 고속도로 및 간선 도로망 대동맥
-      layers.push(
-        new GeoJsonLayer({
-          id: 'korea-offline-highways',
-          data: '/data/korea_roads.json',
-          stroked: true,
-          filled: false,
-          getLineColor: isLight
-            ? [234, 88, 12, 220] // 선명한 오렌지
-            : isCyber
-            ? [236, 72, 153, 210] // 핫핑크
-            : [245, 158, 11, 200], // 골드 앰버 고속도로
-          getLineWidth: 2.2,
-          lineWidthMinPixels: 1.6,
-          pickable: false,
-        })
-      );
+      if (layerConfig.showHighways) {
+        layers.push(
+          new GeoJsonLayer({
+            id: 'korea-offline-highways',
+            data: '/data/korea_roads.json',
+            stroked: true,
+            filled: false,
+            getLineColor: isLight
+              ? [234, 88, 12, currentZoom < 6.8 ? 140 : 220]
+              : isCyber
+              ? [236, 72, 153, currentZoom < 6.8 ? 130 : 210]
+              : [245, 158, 11, currentZoom < 6.8 ? 130 : 200],
+            getLineWidth: currentZoom < 6.8 ? 1.2 : 2.0,
+            lineWidthMinPixels: 1.0,
+            pickable: false,
+          })
+        );
+      }
 
       // 0-5. 전국 63대 주요 거점 도시 및 250개 시·군·구 지명 텍스트 라벨
-      if (offlineCities.length > 0) {
-        const visibleCities = currentZoom < 7.2
-          ? offlineCities.filter(c => c.rank === 1) // 전국 광역 뷰: 전국 63대 주요 거점 도시
-          : offlineCities; // 줌인 뷰: 전국 268개 시군구 전체 표시
+      // (스마트 LOD: 전도 뷰 줌 < 6.8일 때 전국 16개 핵심 광역 거점만 정갈하게 표시하여 글자 겹침 및 조잡함 100% 해소)
+      if (layerConfig.showCityLabels && offlineCities.length > 0) {
+        let visibleCities = offlineCities;
+        if (layerConfig.lodMode === 'SMART_AUTO') {
+          if (currentZoom < 6.8) {
+            // 전국 전도 뷰: 16대 광역 중심 랜드마크만 표출 (수도권 밀집 겹침 방지)
+            const NATIONWIDE_LANDMARKS = ['서울', '인천', '수원', '춘천', '강릉', '원주', '청주', '대전', '세종', '전주', '광주', '대구', '포항', '울산', '부산', '창원', '제주'];
+            visibleCities = offlineCities.filter(c => NATIONWIDE_LANDMARKS.includes(c.name));
+          } else if (currentZoom < 8.5) {
+            // 광역/도 단위 뷰: 전국 63대 주요 거점 도시
+            visibleCities = offlineCities.filter(c => c.rank === 1);
+          } else {
+            // 상세 뷰: 268개 시군구 전체
+            visibleCities = offlineCities;
+          }
+        }
 
         layers.push(
           new TextLayer({
@@ -289,7 +317,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             data: visibleCities,
             getPosition: (d: any) => [d.lng, d.lat, 5],
             getText: (d: any) => d.name,
-            getSize: (d: any) => (d.rank === 1 ? (currentZoom < 7.2 ? 13 : 15) : 11),
+            getSize: (d: any) => (currentZoom < 6.8 ? 12 : d.rank === 1 ? 14 : 11),
             getColor: isLight
               ? [30, 41, 59, 240]
               : isCyber
@@ -303,21 +331,36 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             characterSet: 'auto',
             background: true,
             getBackgroundColor: isLight ? [255, 255, 255, 190] : [15, 23, 42, 190],
-            backgroundPadding: [5, 2, 5, 2],
+            backgroundPadding: [4, 2, 4, 2],
             pickable: false,
           })
         );
       }
 
       // 0-6. 대한민국 전국 30대 명산 및 산악 통신 중계 거점 표고점 (산악 지형 시각화)
-      if (mountains.length > 0) {
+      // (스마트 LOD: 전도 뷰 줌 < 7.0에서는 대한민국 3대 최고봉만 은은하게 표시하여 라벨 충돌 방지)
+      if (layerConfig.showMountainPeaks && mountains.length > 0) {
+        let visibleMountains = mountains;
+        if (layerConfig.lodMode === 'SMART_AUTO') {
+          if (currentZoom < 7.0) {
+            // 전도 뷰: 한라산(1950m), 지리산(1915m), 설악산(1708m) 3대 최고봉만 표시
+            visibleMountains = mountains.filter(m => ['한라산', '지리산', '설악산'].includes(m.name));
+          } else if (currentZoom < 8.5) {
+            // 도별 대표 12대 명산
+            const MAJOR_PEAKS = ['한라산', '지리산', '설악산', '북한산', '관악산', '계룡산', '치악산', '태백산', '덕유산', '팔공산', '무등산', '금정산'];
+            visibleMountains = mountains.filter(m => MAJOR_PEAKS.includes(m.name));
+          } else {
+            visibleMountains = mountains;
+          }
+        }
+
         // 산 정상 표고점 펄스 포인트 (초록/에메랄드 링)
         layers.push(
           new ScatterplotLayer({
             id: 'korea-mountain-peaks-dots',
-            data: mountains,
+            data: visibleMountains,
             getPosition: (d: any) => [d.lng, d.lat, 25],
-            getRadius: (d: any) => (d.type === 'REPEATER_HUB' ? 1400 : 900),
+            getRadius: (d: any) => (currentZoom < 7.0 ? 1000 : d.type === 'REPEATER_HUB' ? 1400 : 900),
             getFillColor: isLight
               ? [16, 185, 129, 210] // 산악 에메랄드 그린
               : [52, 211, 153, 230], // 네온 민트 그린
@@ -332,10 +375,10 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
         layers.push(
           new TextLayer({
             id: 'korea-mountain-peaks-labels',
-            data: mountains,
+            data: visibleMountains,
             getPosition: (d: any) => [d.lng, d.lat, 40],
             getText: (d: any) => `▲ ${d.name} (${d.alt}m)`,
-            getSize: 12,
+            getSize: currentZoom < 7.0 ? 11 : 12,
             getColor: isLight
               ? [6, 95, 70, 255]
               : [167, 243, 208, 255], // 에메랄드 민트 텍스트
@@ -357,7 +400,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     }
 
     // [Layer A-1] 3D Arc 회선 외곽선 (Black Outline Shadow for High Contrast on Any Map)
-    if (filteredEdges.length > 0) {
+    if (layerConfig.showBackboneEdges && filteredEdges.length > 0) {
       layers.push(
         new ArcLayer<NetworkEdge>({
           id: 'network-edges-arc-outline',
@@ -423,277 +466,288 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
       const isProvince = topologyData.currentLevel === 'PROVINCE';
 
       // 펄스 링 (심각 경보 지역 강조)
-      layers.push(
-        new ScatterplotLayer<RegionSummaryNode>({
-          id: 'summary-pulse-rings',
-          data: filteredSummaryNodes.filter(s => s.highestSeverity === 'CRITICAL' || s.highestSeverity === 'MAJOR'),
-          getPosition: d => [d.lng, d.lat, 0],
-          getRadius: isProvince ? 24000 : 2800,
-          getFillColor: d => d.highestSeverity === 'CRITICAL' ? [239, 68, 68, 60] : [249, 115, 22, 50],
-          getLineColor: d => d.highestSeverity === 'CRITICAL' ? [239, 68, 68, 220] : [249, 115, 22, 200],
-          stroked: true,
-          lineWidthMinPixels: 2,
-          pickable: false,
-        })
-      );
+      if (layerConfig.showAlarmPulses) {
+        layers.push(
+          new ScatterplotLayer<RegionSummaryNode>({
+            id: 'summary-pulse-rings',
+            data: filteredSummaryNodes.filter(s => s.highestSeverity === 'CRITICAL' || s.highestSeverity === 'MAJOR'),
+            getPosition: d => [d.lng, d.lat, 0],
+            getRadius: isProvince ? 24000 : 2800,
+            getFillColor: d => d.highestSeverity === 'CRITICAL' ? [239, 68, 68, 60] : [249, 115, 22, 50],
+            getLineColor: d => d.highestSeverity === 'CRITICAL' ? [239, 68, 68, 220] : [249, 115, 22, 200],
+            stroked: true,
+            lineWidthMinPixels: 2,
+            pickable: false,
+          })
+        );
+      }
 
       // 3D 4각 통신국사/권역 서머리 빌딩 블록 (Square Chassis Block)
-      layers.push(
-        new ColumnLayer<RegionSummaryNode>({
-          id: 'summary-3d-columns',
-          data: filteredSummaryNodes,
-          getPosition: d => [d.lng, d.lat],
-          getElevation: d => {
-            // 높이: 경보 수 및 총 장비 수 반영
-            const alarmWeight = (d.criticalCount * 3 + d.majorCount * 2 + d.minorCount) * 1500;
-            if (isProvince) {
-              return 15000 + alarmWeight + d.nodeCount * 400;
-            }
-            return 2500 + alarmWeight + d.nodeCount * 250;
-          },
-          getFillColor: d => getSeverityColor(d.highestSeverity),
-          radius: isProvince ? 14000 : 1500,
-          diskResolution: 4, // 원통형 대신 4각형 직육면체 블록
-          angle: 45, // 축 정렬된 4각 큐브
-          extruded: true,
-          stroked: true,
-          getLineColor: [255, 255, 255, 160],
-          lineWidthMinPixels: 2,
-          pickable: true,
-          onClick: info => {
-            if (info.object) {
-              onSelectNode(info.object);
-              // 서머리 노드 클릭 시 해당 위치로 줌인 (시도 -> 국사, 국사 -> 상세 장비)
-              if (mapRef.current) {
-                const targetZoom = isProvince ? 9.5 : 13.5;
-                mapRef.current.flyTo({
-                  center: [info.object.lng, info.object.lat],
-                  zoom: targetZoom,
-                  pitch: 55,
-                  duration: 1500,
-                });
+      if (layerConfig.showEquipmentBoxes) {
+        layers.push(
+          new ColumnLayer<RegionSummaryNode>({
+            id: 'summary-3d-columns',
+            data: filteredSummaryNodes,
+            getPosition: d => [d.lng, d.lat],
+            getElevation: d => {
+              // 높이: 경보 수 및 총 장비 수 반영
+              const alarmWeight = (d.criticalCount * 3 + d.majorCount * 2 + d.minorCount) * 1500;
+              if (isProvince) {
+                return 15000 + alarmWeight + d.nodeCount * 400;
               }
-            }
-          },
-          onHover: info => {
-            if (info.object) {
-              setHoverInfo({
-                x: info.x,
-                y: info.y,
-                object: info.object,
-                type: 'summary',
-              });
-            } else {
-              setHoverInfo(null);
-            }
-          },
-        })
-      );
+              return 2500 + alarmWeight + d.nodeCount * 250;
+            },
+            getFillColor: d => getSeverityColor(d.highestSeverity),
+            radius: isProvince ? 14000 : 1500,
+            diskResolution: 4, // 원통형 대신 4각형 직육면체 블록
+            angle: 45, // 축 정렬된 4각 큐브
+            extruded: true,
+            stroked: true,
+            getLineColor: [255, 255, 255, 160],
+            lineWidthMinPixels: 2,
+            pickable: true,
+            onClick: info => {
+              if (info.object) {
+                onSelectNode(info.object);
+                // 서머리 노드 클릭 시 해당 위치로 줌인 (시도 -> 국사, 국사 -> 상세 장비)
+                if (mapRef.current) {
+                  const targetZoom = isProvince ? 9.5 : 13.5;
+                  mapRef.current.flyTo({
+                    center: [info.object.lng, info.object.lat],
+                    zoom: targetZoom,
+                    pitch: 55,
+                    duration: 1500,
+                  });
+                }
+              }
+            },
+            onHover: info => {
+              if (info.object) {
+                setHoverInfo({
+                  x: info.x,
+                  y: info.y,
+                  object: info.object,
+                  type: 'summary',
+                });
+              } else {
+                setHoverInfo(null);
+              }
+            },
+          })
+        );
+      }
 
       // 3D 텍스트 라벨 (서머리 노드 - 규칙 적용)
-      layers.push(
-        new TextLayer<RegionSummaryNode>({
-          id: 'summary-text-labels',
-          data: filteredSummaryNodes,
-          getPosition: d => [d.lng, d.lat, isProvince ? 22000 : 4200],
-          getText: d => {
-            const parts: string[] = [];
-            // 지역명/국사명
-            if (labelConfig.showRegion || labelConfig.showName) {
-              parts.push(d.name);
-            }
-            // 우편번호
-            if (labelConfig.showPostalCode && d.postalCodePrefix) {
-              parts.push(`[${d.postalCodePrefix}]`);
-            }
+      if (layerConfig.showSummaryNodes) {
+        layers.push(
+          new TextLayer<RegionSummaryNode>({
+            id: 'summary-text-labels',
+            data: filteredSummaryNodes,
+            getPosition: d => [d.lng, d.lat, isProvince ? 22000 : 4200],
+            getText: d => {
+              const parts: string[] = [];
+              // 지역명/국사명
+              if (labelConfig.showRegion || labelConfig.showName) {
+                parts.push(d.name);
+              }
+              // 우편번호
+              if (labelConfig.showPostalCode && d.postalCodePrefix) {
+                parts.push(`[${d.postalCodePrefix}]`);
+              }
 
-            // 하단 상태 라인 (경보, 장비수, 메트릭스)
-            const subParts: string[] = [];
-            if (labelConfig.showAlarm) {
-              const alarmStr = d.criticalCount > 0 ? `CRIT ${d.criticalCount}` : (d.majorCount > 0 ? `WARN ${d.majorCount}` : 'OK');
-              subParts.push(alarmStr);
-            }
-            subParts.push(`${d.nodeCount}대`);
-            if (labelConfig.showMetrics && d.totalTrafficGbps) {
-              subParts.push(`${d.totalTrafficGbps}G`);
-            }
+              // 하단 상태 라인 (경보, 장비수, 메트릭스)
+              const subParts: string[] = [];
+              if (labelConfig.showAlarm) {
+                const alarmStr = d.criticalCount > 0 ? `CRIT ${d.criticalCount}` : (d.majorCount > 0 ? `WARN ${d.majorCount}` : 'OK');
+                subParts.push(alarmStr);
+              }
+              subParts.push(`${d.nodeCount}대`);
+              if (labelConfig.showMetrics && d.totalTrafficGbps) {
+                subParts.push(`${d.totalTrafficGbps}G`);
+              }
 
-            const header = parts.join(' ');
-            const sub = subParts.length > 0 ? `[${subParts.join(' · ')}]` : '';
-            return header ? (sub ? `${header}\n${sub}` : header) : sub;
-          },
-          getSize: isProvince ? 15 : 13,
-          getColor: [255, 255, 255, 255],
-          getTextAnchor: 'middle',
-          getAlignmentBaseline: 'bottom',
-          billboard: true,
-          fontFamily: 'Pretendard, -apple-system, sans-serif',
-          fontWeight: 700,
-          background: true,
-          getBackgroundColor: [15, 23, 42, 210],
-          backgroundPadding: [6, 4, 6, 4],
-          characterSet: 'auto',
-        })
-      );
+              const header = parts.join(' ');
+              const sub = subParts.length > 0 ? `[${subParts.join(' · ')}]` : '';
+              return header ? (sub ? `${header}\n${sub}` : header) : sub;
+            },
+            getSize: isProvince ? 15 : 13,
+            getColor: [255, 255, 255, 255],
+            getTextAnchor: 'middle',
+            getAlignmentBaseline: 'bottom',
+            billboard: true,
+            fontFamily: 'Pretendard, -apple-system, sans-serif',
+            fontWeight: 700,
+            background: true,
+            getBackgroundColor: [15, 23, 42, 210],
+            backgroundPadding: [6, 4, 6, 4],
+            characterSet: 'auto',
+          })
+        );
+      }
     }
 
     // [Layer C] 상세 개별 장비 노드 (Zoom >= 11.5)
     if (filteredDetailedNodes.length > 0) {
       // 펄스 링 (CRITICAL 장비)
-      layers.push(
-        new ScatterplotLayer<NetworkNode>({
-          id: 'device-pulse-rings',
-          data: filteredDetailedNodes.filter(d => d.status === 'CRITICAL'),
-          getPosition: d => [d.lng, d.lat, 0],
-          getRadius: 120,
-          getFillColor: [239, 68, 68, 70],
-          getLineColor: [239, 68, 68, 240],
-          stroked: true,
-          lineWidthMinPixels: 2,
-          pickable: false,
-        })
-      );
-
-      // 3D 4각형 네트워크 장비 섀시 (Square 19-inch Rack Chassis)
-      layers.push(
-        new ColumnLayer<NetworkNode>({
-          id: 'device-3d-columns',
-          data: filteredDetailedNodes,
-          getPosition: d => [d.lng, d.lat],
-          getElevation: d => d.altitude * 1.8,
-          getFillColor: d => getSeverityColor(d.status),
-          radius: 45,
-          diskResolution: 4, // 4각형 네트워크 장비 박스 모양
-          angle: 45, // 반듯한 4각 직육면체 섀시 정렬
-          extruded: true,
-          stroked: true,
-          getLineColor: [255, 255, 255, 210], // 메탈 섀시 외곽선 강조
-          lineWidthMinPixels: 1.5,
-          pickable: true,
-          onClick: info => {
-            if (info.object) {
-              onSelectNode(info.object);
-            }
-          },
-          onHover: info => {
-            if (info.object) {
-              setHoverInfo({
-                x: info.x,
-                y: info.y,
-                object: info.object,
-                type: 'device',
-              });
-            } else {
-              setHoverInfo(null);
-            }
-          },
-        })
-      );
-
-      // [동일 위치 국사 밀집 장비 처리 규칙]
-      // 동일 국사에 여러 장비가 함께 배치된 경우 국사 통합 헤더 뱃지 렌더링
-      if (labelConfig.coLocationMode === 'SMART_STATION_GROUP') {
-        // 국사별 장비 맵 집계
-        const stationGroups = new Map<string, NetworkNode[]>();
-        filteredDetailedNodes.forEach(n => {
-          const list = stationGroups.get(n.postalCode) || [];
-          list.push(n);
-          stationGroups.set(n.postalCode, list);
-        });
-
-        const stationHeaders: { name: string; postalCode: string; count: number; lat: number; lng: number; maxAlt: number }[] = [];
-        stationGroups.forEach((group, pCode) => {
-          if (group.length > 1) {
-            const first = group[0];
-            const avgLat = group.reduce((s, g) => s + g.lat, 0) / group.length;
-            const avgLng = group.reduce((s, g) => s + g.lng, 0) / group.length;
-            const maxAlt = Math.max(...group.map(g => g.altitude * 1.8));
-            stationHeaders.push({
-              name: first.stationName,
-              postalCode: pCode,
-              count: group.length,
-              lat: avgLat,
-              lng: avgLng,
-              maxAlt,
-            });
-          }
-        });
-
-        if (stationHeaders.length > 0 && labelConfig.showRegion) {
-          layers.push(
-            new TextLayer({
-              id: 'station-group-header-labels',
-              data: stationHeaders,
-              getPosition: d => [d.lng, d.lat, d.maxAlt + 110], // 장비들 최상단 상공에 띄움
-              getText: d => `POP: ${d.name} (${d.count}대 수용)${labelConfig.showPostalCode ? ` · ${d.postalCode}` : ''}`,
-              getSize: 14,
-              getColor: [56, 189, 248, 255],
-              getTextAnchor: 'middle',
-              getAlignmentBaseline: 'bottom',
-              billboard: true,
-              fontFamily: 'Pretendard, -apple-system, sans-serif',
-              fontWeight: 800,
-              background: true,
-              getBackgroundColor: [15, 23, 42, 230],
-              backgroundPadding: [8, 4, 8, 4],
-              characterSet: 'auto',
-            })
-          );
-        }
+      if (layerConfig.showAlarmPulses) {
+        layers.push(
+          new ScatterplotLayer<NetworkNode>({
+            id: 'device-pulse-rings',
+            data: filteredDetailedNodes.filter(d => d.status === 'CRITICAL'),
+            getPosition: d => [d.lng, d.lat, 0],
+            getRadius: 120,
+            getFillColor: [239, 68, 68, 70],
+            getLineColor: [239, 68, 68, 240],
+            stroked: true,
+            lineWidthMinPixels: 2,
+            pickable: false,
+          })
+        );
       }
 
-      // 3D 장비별 텍스트 라벨 (사용자 규칙 반영)
-      layers.push(
-        new TextLayer<NetworkNode>({
-          id: 'device-text-labels',
-          data: filteredDetailedNodes,
-          getPosition: d => [d.lng, d.lat, d.altitude * 1.8 + 20],
-          getText: d => {
-            const lines: string[] = [];
+      // 3D 4각형 네트워크 장비 섀시 (Square 19-inch Rack Chassis)
+      if (layerConfig.showEquipmentBoxes) {
+        layers.push(
+          new ColumnLayer<NetworkNode>({
+            id: 'device-3d-columns',
+            data: filteredDetailedNodes,
+            getPosition: d => [d.lng, d.lat],
+            getElevation: d => d.altitude * 1.8,
+            getFillColor: d => getSeverityColor(d.status),
+            radius: 45,
+            diskResolution: 4, // 4각형 네트워크 장비 박스 모양
+            angle: 45, // 반듯한 4각 직육면체 섀시 정렬
+            extruded: true,
+            stroked: true,
+            getLineColor: [255, 255, 255, 210], // 메탈 섀시 외곽선 강조
+            lineWidthMinPixels: 1.5,
+            pickable: true,
+            onClick: info => {
+              if (info.object) {
+                onSelectNode(info.object);
+              }
+            },
+            onHover: info => {
+              if (info.object) {
+                setHoverInfo({
+                  x: info.x,
+                  y: info.y,
+                  object: info.object,
+                  type: 'device',
+                });
+              } else {
+                setHoverInfo(null);
+              }
+            },
+          })
+        );
+      }
 
-            // 라인 1: 장비 식별자
-            let nameStr = '';
-            if (labelConfig.coLocationMode === 'SMART_STATION_GROUP') {
-              // 밀집 스마트 모드: 간결한 롤/슬롯명 위주로 표시하여 겹침 방지
-              const roleSuffix = d.name.split(' ').slice(-1)[0] || d.name;
-              nameStr = labelConfig.showName ? roleSuffix : '';
-            } else {
-              // 전체 표시 모드
-              nameStr = labelConfig.showName ? d.name : '';
+      // [동일 위치 국사 밀집 장비 처리 규칙]
+      if (layerConfig.showDeviceLabels) {
+        if (labelConfig.coLocationMode === 'SMART_STATION_GROUP') {
+          // 국사별 장비 맵 집계
+          const stationGroups = new Map<string, NetworkNode[]>();
+          filteredDetailedNodes.forEach(n => {
+            const list = stationGroups.get(n.postalCode) || [];
+            list.push(n);
+            stationGroups.set(n.postalCode, list);
+          });
+
+          const stationHeaders: { name: string; postalCode: string; count: number; lat: number; lng: number; maxAlt: number }[] = [];
+          stationGroups.forEach((group, pCode) => {
+            if (group.length > 1) {
+              const first = group[0];
+              const avgLat = group.reduce((s, g) => s + g.lat, 0) / group.length;
+              const avgLng = group.reduce((s, g) => s + g.lng, 0) / group.length;
+              const maxAlt = Math.max(...group.map(g => g.altitude * 1.8));
+              stationHeaders.push({
+                name: first.stationName,
+                postalCode: pCode,
+                count: group.length,
+                lat: avgLat,
+                lng: avgLng,
+                maxAlt,
+              });
             }
+          });
 
-            // 경보 상태
-            if (labelConfig.showAlarm && d.status !== 'NORMAL') {
-              nameStr = nameStr ? `[${d.status}] ${nameStr}` : `[${d.status}]`;
-            }
-            if (nameStr) lines.push(nameStr);
+          if (stationHeaders.length > 0 && labelConfig.showRegion) {
+            layers.push(
+              new TextLayer({
+                id: 'station-group-header-labels',
+                data: stationHeaders,
+                getPosition: d => [d.lng, d.lat, d.maxAlt + 110], // 장비들 최상단 상공에 띄움
+                getText: d => `POP: ${d.name} (${d.count}대 수용)${labelConfig.showPostalCode ? ` · ${d.postalCode}` : ''}`,
+                getSize: 14,
+                getColor: [56, 189, 248, 255],
+                getTextAnchor: 'middle',
+                getAlignmentBaseline: 'bottom',
+                billboard: true,
+                fontFamily: 'Pretendard, -apple-system, sans-serif',
+                fontWeight: 800,
+                background: true,
+                getBackgroundColor: [15, 23, 42, 230],
+                backgroundPadding: [8, 4, 8, 4],
+                characterSet: 'auto',
+              })
+            );
+          }
+        }
 
-            // 라인 2: IP 주소 및 우편번호
-            const metaParts: string[] = [];
-            if (labelConfig.showIp) metaParts.push(d.ipAddress);
-            if (labelConfig.showPostalCode) metaParts.push(d.postalCode);
-            if (metaParts.length > 0) lines.push(metaParts.join(' '));
+        // 3D 장비별 텍스트 라벨 (사용자 규칙 반영)
+        layers.push(
+          new TextLayer<NetworkNode>({
+            id: 'device-text-labels',
+            data: filteredDetailedNodes,
+            getPosition: d => [d.lng, d.lat, d.altitude * 1.8 + 20],
+            getText: d => {
+              const lines: string[] = [];
 
-            // 라인 3: 메트릭스 (트래픽 / CPU)
-            if (labelConfig.showMetrics) {
-              lines.push(`CPU:${d.metrics.cpuPercent}% · ${d.metrics.trafficGbps}G`);
-            }
+              // 라인 1: 장비 식별자
+              let nameStr = '';
+              if (labelConfig.coLocationMode === 'SMART_STATION_GROUP') {
+                // 밀집 스마트 모드: 간결한 롤/슬롯명 위주로 표시하여 겹침 방지
+                const roleSuffix = d.name.split(' ').slice(-1)[0] || d.name;
+                nameStr = labelConfig.showName ? roleSuffix : '';
+              } else {
+                // 전체 표시 모드
+                nameStr = labelConfig.showName ? d.name : '';
+              }
 
-            return lines.join('\n') || d.name;
-          },
-          getSize: 12,
-          getColor: [241, 245, 249, 255],
-          getTextAnchor: 'middle',
-          getAlignmentBaseline: 'bottom',
-          billboard: true,
-          fontFamily: 'Pretendard, -apple-system, sans-serif',
-          fontWeight: 600,
-          background: true,
-          getBackgroundColor: [15, 23, 42, 220],
-          backgroundPadding: [4, 2, 4, 2],
-          characterSet: 'auto',
-        })
-      );
+              // 경보 상태
+              if (labelConfig.showAlarm && d.status !== 'NORMAL') {
+                nameStr = nameStr ? `[${d.status}] ${nameStr}` : `[${d.status}]`;
+              }
+              if (nameStr) lines.push(nameStr);
+
+              // 라인 2: IP 주소 및 우편번호
+              const metaParts: string[] = [];
+              if (labelConfig.showIp) metaParts.push(d.ipAddress);
+              if (labelConfig.showPostalCode) metaParts.push(d.postalCode);
+              if (metaParts.length > 0) lines.push(metaParts.join(' '));
+
+              // 라인 3: 메트릭스 (트래픽 / CPU)
+              if (labelConfig.showMetrics) {
+                lines.push(`CPU:${d.metrics.cpuPercent}% · ${d.metrics.trafficGbps}G`);
+              }
+
+              return lines.join('\n') || d.name;
+            },
+            getSize: 12,
+            getColor: [241, 245, 249, 255],
+            getTextAnchor: 'middle',
+            getAlignmentBaseline: 'bottom',
+            billboard: true,
+            fontFamily: 'Pretendard, -apple-system, sans-serif',
+            fontWeight: 600,
+            background: true,
+            getBackgroundColor: [15, 23, 42, 220],
+            backgroundPadding: [4, 2, 4, 2],
+            characterSet: 'auto',
+          })
+        );
+      }
     }
 
     // [Layer D] 선택된 노드 하이라이트 레이어
@@ -714,7 +768,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     }
 
     overlayRef.current.setProps({ layers });
-  }, [allNodes, allEdges, currentZoom, filterSeverity, getSeverityColor, onSelectNode, selectedNode, labelConfig, currentMapStyle, offlineCities, mountains]);
+  }, [allNodes, allEdges, currentZoom, filterSeverity, getSeverityColor, onSelectNode, selectedNode, labelConfig, layerConfig, currentMapStyle, offlineCities, mountains]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>

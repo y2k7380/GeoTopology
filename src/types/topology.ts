@@ -117,3 +117,42 @@ export const DEFAULT_LABEL_CONFIG: LabelConfig = {
   showMetrics: false,
   coLocationMode: 'SMART_STATION_GROUP',
 };
+
+// 지도 레이어별 표시정보 옵션 처리 인터페이스
+export interface LayerVisibilityConfig {
+  // 🗺️ 배경 지도 요소
+  showProvinceBorders: boolean;    // 시도 행정경계선 (17개 광역시도)
+  showMuniBorders: boolean;        // 시군구 행정경계선 (250개 시군구)
+  showHighways: boolean;           // 고속도로 및 주요 도로망
+  showWaterways: boolean;          // 주요 수계/하천 (한강, 낙동강 등)
+  showCityLabels: boolean;         // 도시 및 시군구 지명 라벨
+  showMountainPeaks: boolean;      // 30대 명산 및 해발고도 표고점
+
+  // 📡 관제 토폴로지 요소
+  showBackboneEdges: boolean;      // 3D 백본/메트로 회선 아크 (Arc)
+  showEquipmentBoxes: boolean;     // 국사/장비 섀시 (3D Box)
+  showSummaryNodes: boolean;       // 광역/국사 요약 카드 (Summary Node)
+  showDeviceLabels: boolean;       // 장비 텍스트 라벨 (Text Layer)
+  showAlarmPulses: boolean;        // 장애 경보 펄스 링 (Pulse Circle)
+
+  // 🎯 디테일 수준(LOD) 모드
+  lodMode: 'SMART_AUTO' | 'ALWAYS_FULL'; // 스마트 자동(전국 뷰 깔끔 정돈) vs 항상 전체 표시
+}
+
+export const DEFAULT_LAYER_CONFIG: LayerVisibilityConfig = {
+  showProvinceBorders: true,
+  showMuniBorders: true,
+  showHighways: true,
+  showWaterways: true,
+  showCityLabels: true,
+  showMountainPeaks: true,
+
+  showBackboneEdges: true,
+  showEquipmentBoxes: true,
+  showSummaryNodes: true,
+  showDeviceLabels: true,
+  showAlarmPulses: true,
+
+  lodMode: 'SMART_AUTO', // 기본값: 줌아웃 시 조잡함 방지 스마트 자동 정돈
+};
+

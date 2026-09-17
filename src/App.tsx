@@ -3,9 +3,10 @@ import { TopologyMap } from './components/TopologyMap';
 import { HeaderNav } from './components/HeaderNav';
 import { AlarmDashboard } from './components/AlarmDashboard';
 import { NodeDetailDrawer } from './components/NodeDetailDrawer';
+import { RightMapOverlay } from './components/RightMapOverlay';
 import { generateInitialTopology } from './data/mockTopology';
-import type { NetworkNode, NetworkEdge, RegionSummaryNode, AlarmSeverity, LabelConfig } from './types/topology';
-import { DEFAULT_LABEL_CONFIG } from './types/topology';
+import type { NetworkNode, NetworkEdge, RegionSummaryNode, AlarmSeverity, LabelConfig, LayerVisibilityConfig } from './types/topology';
+import { DEFAULT_LABEL_CONFIG, DEFAULT_LAYER_CONFIG } from './types/topology';
 import type { MapStyleType } from './data/mapStyles';
 import { Layers } from 'lucide-react';
 
@@ -20,6 +21,12 @@ export const App: React.FC = () => {
 
   // 노드 라벨 규칙 설정 상태
   const [labelConfig, setLabelConfig] = useState<LabelConfig>(DEFAULT_LABEL_CONFIG);
+
+  // 지도 및 토폴로지 레이어 가시화 옵션 상태 (우측 오버레이 제어)
+  const [layerConfig, setLayerConfig] = useState<LayerVisibilityConfig>(DEFAULT_LAYER_CONFIG);
+
+  // 현재 지도 줌 레벨 상태
+  const [currentZoom, setCurrentZoom] = useState<number>(6.8);
 
   // 뷰포트 및 모드 상태
   const [is3DMode, setIs3DMode] = useState<boolean>(true);
@@ -159,6 +166,17 @@ export const App: React.FC = () => {
         filterSeverity={filterSeverity}
         currentMapStyle={currentMapStyle}
         labelConfig={labelConfig}
+        layerConfig={layerConfig}
+        onZoomChange={setCurrentZoom}
+      />
+
+      {/* 지도 오른쪽 상단 플로팅 레이어 & 테마 제어 오버레이 (카카오/네이버 지도 스타일) */}
+      <RightMapOverlay
+        currentMapStyle={currentMapStyle}
+        onChangeMapStyle={setCurrentMapStyle}
+        layerConfig={layerConfig}
+        onChangeLayerConfig={setLayerConfig}
+        currentZoom={currentZoom}
       />
 
       {/* 상단 네비게이션 & 우편번호 검색 */}
