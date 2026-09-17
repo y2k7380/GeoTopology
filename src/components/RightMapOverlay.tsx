@@ -1,5 +1,21 @@
 import React, { useState } from 'react';
-import { Layers, Map, Sparkles, Check, ChevronDown, ChevronUp, Shield } from 'lucide-react';
+import {
+  Map,
+  Sparkles,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Shield,
+  SlidersHorizontal,
+  Compass,
+  Radio,
+  Box,
+  Tag,
+  Mountain,
+  Milestone,
+  Waves,
+  Building,
+} from 'lucide-react';
 import { FREE_MAP_OPTIONS } from '../data/mapStyles';
 import type { MapStyleType } from '../data/mapStyles';
 import type { LayerVisibilityConfig } from '../types/topology';
@@ -19,7 +35,7 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
   onChangeLayerConfig,
   currentZoom,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'MAP_LAYERS' | 'TOPOLOGY'>('MAP_LAYERS');
 
   const toggleLayer = (key: keyof LayerVisibilityConfig) => {
@@ -28,6 +44,92 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
       [key]: !layerConfig[key],
     });
   };
+
+  const toggleLodMode = () => {
+    onChangeLayerConfig({
+      ...layerConfig,
+      lodMode: layerConfig.lodMode === 'SMART_AUTO' ? 'ALWAYS_FULL' : 'SMART_AUTO',
+    });
+  };
+
+  // 네이버 지도 스타일 원클릭 퀵 토글 칩 정의
+  const quickToggles = [
+    {
+      key: 'showProvinceBorders' as const,
+      label: '행정경계',
+      icon: <Building size={13} />,
+      isActive: layerConfig.showProvinceBorders,
+      onToggle: () => {
+        // 시도 경계와 시군구 경계를 함께 토글하거나 시도 경계 토글
+        const nextVal = !layerConfig.showProvinceBorders;
+        onChangeLayerConfig({
+          ...layerConfig,
+          showProvinceBorders: nextVal,
+          showMuniBorders: nextVal,
+        });
+      },
+    },
+    {
+      key: 'showHighways' as const,
+      label: '도로망',
+      icon: <Milestone size={13} />,
+      isActive: layerConfig.showHighways,
+      onToggle: () => toggleLayer('showHighways'),
+    },
+    {
+      key: 'showWaterways' as const,
+      label: '하천/수계',
+      icon: <Waves size={13} />,
+      isActive: layerConfig.showWaterways,
+      onToggle: () => toggleLayer('showWaterways'),
+    },
+    {
+      key: 'showCityLabels' as const,
+      label: '도시지명',
+      icon: <Compass size={13} />,
+      isActive: layerConfig.showCityLabels,
+      onToggle: () => toggleLayer('showCityLabels'),
+    },
+    {
+      key: 'showMountainPeaks' as const,
+      label: '명산/고도',
+      icon: <Mountain size={13} />,
+      isActive: layerConfig.showMountainPeaks,
+      onToggle: () => toggleLayer('showMountainPeaks'),
+    },
+    {
+      key: 'showBackboneEdges' as const,
+      label: '3D 회선',
+      icon: <Radio size={13} />,
+      isActive: layerConfig.showBackboneEdges,
+      onToggle: () => toggleLayer('showBackboneEdges'),
+      isTopology: true,
+    },
+    {
+      key: 'showEquipmentBoxes' as const,
+      label: '장비 섀시',
+      icon: <Box size={13} />,
+      isActive: layerConfig.showEquipmentBoxes,
+      onToggle: () => toggleLayer('showEquipmentBoxes'),
+      isTopology: true,
+    },
+    {
+      key: 'showDeviceLabels' as const,
+      label: '장비 라벨',
+      icon: <Tag size={13} />,
+      isActive: layerConfig.showDeviceLabels,
+      onToggle: () => toggleLayer('showDeviceLabels'),
+      isTopology: true,
+    },
+    {
+      key: 'lodMode' as const,
+      label: layerConfig.lodMode === 'SMART_AUTO' ? '스마트 LOD' : '전체 표시',
+      icon: <Sparkles size={13} />,
+      isActive: layerConfig.lodMode === 'SMART_AUTO',
+      onToggle: toggleLodMode,
+      isSpecial: true,
+    },
+  ];
 
   return (
     <div
@@ -39,55 +141,117 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-end',
+        gap: 8,
         pointerEvents: 'auto',
       }}
     >
-      {/* 1. 우측 플로팅 레이어 컨트롤 버튼 (카카오/네이버 지도 스타일) */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
+      {/* 🧭 네이버 지도 스타일 지도 위 직관적인 퀵 토글 버튼 툴바 (Naver Map Style Quick Toolbar) */}
+      <div
         className="glass-panel"
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '8px 14px',
-          background: isOpen ? 'rgba(6, 182, 212, 0.25)' : 'rgba(15, 23, 42, 0.85)',
-          border: isOpen ? '1px solid #06b6d4' : '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: 8,
-          color: isOpen ? '#38bdf8' : '#f1f5f9',
-          fontSize: 12,
-          fontWeight: 700,
-          cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
-          transition: 'all 0.2s ease',
+          gap: 5,
+          padding: '5px 7px',
+          borderRadius: 10,
+          background: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(56, 189, 248, 0.25)',
+          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.45)',
+          flexWrap: 'wrap',
+          maxWidth: 'calc(100vw - 32px)',
+          justifyContent: 'flex-end',
         }}
-        title="지도 및 관제 레이어 표시 설정"
       >
-        <Layers size={16} color={isOpen ? '#38bdf8' : '#38bdf8'} />
-        <span>레이어 옵션</span>
-        <span
-          style={{
-            fontSize: 10,
-            padding: '1px 6px',
-            borderRadius: 4,
-            background: 'rgba(6, 182, 212, 0.3)',
-            color: '#67e8f9',
-          }}
-        >
-          {layerConfig.lodMode === 'SMART_AUTO' ? '스마트 LOD' : '전체'}
-        </span>
-        {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-      </button>
+        {quickToggles.map(item => {
+          const active = item.isActive;
+          let activeBg = 'rgba(6, 182, 212, 0.25)';
+          let activeBorder = '1px solid #06b6d4';
+          let activeColor = '#38bdf8';
 
-      {/* 2. 펼쳐졌을 때 나타나는 오른쪽 반투명 오버레이 패널 */}
-      {isOpen && (
+          if (item.isTopology) {
+            activeBg = 'rgba(168, 85, 247, 0.25)';
+            activeBorder = '1px solid #a855f7';
+            activeColor = '#c084fc';
+          } else if (item.isSpecial) {
+            activeBg = 'rgba(16, 185, 129, 0.25)';
+            activeBorder = '1px solid #10b981';
+            activeColor = '#34d399';
+          }
+
+          return (
+            <button
+              key={item.label}
+              onClick={item.onToggle}
+              title={`${item.label} ${active ? '숨기기' : '표시하기'}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                padding: '5px 10px',
+                borderRadius: 7,
+                fontSize: 11,
+                fontWeight: active ? 700 : 500,
+                background: active ? activeBg : 'rgba(255, 255, 255, 0.04)',
+                border: active ? activeBorder : '1px solid rgba(255, 255, 255, 0.08)',
+                color: active ? activeColor : '#94a3b8',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                userSelect: 'none',
+                boxShadow: active ? '0 0 10px rgba(6, 182, 212, 0.25)' : 'none',
+              }}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: active ? (item.isTopology ? '#a855f7' : item.isSpecial ? '#10b981' : '#06b6d4') : '#475569',
+                  boxShadow: active ? '0 0 6px currentColor' : 'none',
+                  display: 'inline-block',
+                }}
+              />
+            </button>
+          );
+        })}
+
+        <div style={{ width: 1, height: 18, background: 'rgba(255, 255, 255, 0.15)', margin: '0 2px' }} />
+
+        {/* ⚙️ 세부 레이어 & 지도 테마 서랍 버튼 */}
+        <button
+          onClick={() => setIsDetailOpen(!isDetailOpen)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            padding: '5px 10px',
+            borderRadius: 7,
+            fontSize: 11,
+            fontWeight: 700,
+            background: isDetailOpen ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.08)',
+            border: isDetailOpen ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.15)',
+            color: isDetailOpen ? '#7dd3fc' : '#e2e8f0',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          title="지도 테마 전환 및 세부 레이어 옵션 패널 열기"
+        >
+          <SlidersHorizontal size={13} />
+          <span>테마/세부</span>
+          {isDetailOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
+      </div>
+
+      {/* 2. 상세 테마/레이어 오버레이 패널 (필요 시 슬라이드 다운) */}
+      {isDetailOpen && (
         <div
           className="glass-panel"
           style={{
             width: 320,
-            maxHeight: 'calc(100vh - 120px)',
+            maxHeight: 'calc(100vh - 140px)',
             overflowY: 'auto',
-            marginTop: 8,
             padding: '14px',
             display: 'flex',
             flexDirection: 'column',
@@ -127,7 +291,7 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
               }}
             >
               <Map size={13} />
-              배경 지도 레이어
+              배경 지도 및 테마
             </button>
             <button
               onClick={() => setActiveTab('TOPOLOGY')}
@@ -137,9 +301,9 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
                 borderRadius: 6,
                 fontSize: 11,
                 fontWeight: 600,
-                background: activeTab === 'TOPOLOGY' ? 'rgba(6, 182, 212, 0.25)' : 'transparent',
-                color: activeTab === 'TOPOLOGY' ? '#38bdf8' : '#94a3b8',
-                border: activeTab === 'TOPOLOGY' ? '1px solid rgba(6, 182, 212, 0.4)' : 'none',
+                background: activeTab === 'TOPOLOGY' ? 'rgba(168, 85, 247, 0.25)' : 'transparent',
+                color: activeTab === 'TOPOLOGY' ? '#c084fc' : '#94a3b8',
+                border: activeTab === 'TOPOLOGY' ? '1px solid rgba(168, 85, 247, 0.4)' : 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -148,63 +312,14 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
               }}
             >
               <Shield size={13} />
-              관제 토폴로지 레이어
+              관제 토폴로지 설정
             </button>
           </div>
 
-          {/* 🎯 전도 조잡함 방지 스마트 디테일 제어 (LOD) 토글 */}
-          <div
-            style={{
-              padding: '10px 12px',
-              borderRadius: 8,
-              background: layerConfig.lodMode === 'SMART_AUTO'
-                ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(14, 165, 233, 0.05) 100%)'
-                : 'rgba(255, 255, 255, 0.03)',
-              border: layerConfig.lodMode === 'SMART_AUTO'
-                ? '1px solid rgba(6, 182, 212, 0.35)'
-                : '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 6,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Sparkles size={14} color="#38bdf8" />
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>전도 뷰 스마트 정돈 (LOD)</span>
-              </div>
-              <button
-                onClick={() =>
-                  onChangeLayerConfig({
-                    ...layerConfig,
-                    lodMode: layerConfig.lodMode === 'SMART_AUTO' ? 'ALWAYS_FULL' : 'SMART_AUTO',
-                  })
-                }
-                style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '3px 8px',
-                  borderRadius: 4,
-                  background: layerConfig.lodMode === 'SMART_AUTO' ? '#0284c7' : '#334155',
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                {layerConfig.lodMode === 'SMART_AUTO' ? '권장 활성 ON' : '항상 전체 OFF'}
-              </button>
-            </div>
-            <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.4 }}>
-              {layerConfig.lodMode === 'SMART_AUTO'
-                ? '✨ 줌아웃(전도) 시 주요 광역 거점·명산만 간결하게 표출하여 조잡함을 없애고, 줌인할수록 세부 시군구와 장비가 순차적으로 나타납니다.'
-                : '⚠️ 줌 레벨과 무관하게 모든 시군구 경계, 268개 지명, 30개 산이 항상 최대로 출력됩니다.'}
-            </div>
-          </div>
-
-          {/* TAB 1: 배경 지도 레이어 설정 */}
+          {/* TAB 1: 배경 지도 테마 및 세부 레이어 */}
           {activeTab === 'MAP_LAYERS' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {/* 지도 스타일 선택 셀렉터 */}
+              {/* 지도 테마 선택 셀렉터 */}
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', marginBottom: 6 }}>
                   🗺️ 지도 테마 선택 (현재: 줌 {currentZoom.toFixed(1)})
@@ -245,10 +360,10 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
                 </div>
               </div>
 
-              {/* 배경 레이어 요소별 체크박스 */}
+              {/* 세부 구성요소 체크박스 */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 10 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', marginBottom: 6 }}>
-                  📐 지도 구성 요소 표시 토글
+                  📐 지도 구성요소 개별 토글
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11 }}>
                   {[
@@ -297,7 +412,7 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
           {/* TAB 2: 관제 토폴로지 레이어 설정 */}
           {activeTab === 'TOPOLOGY' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#c084fc', marginBottom: 4 }}>
                 📡 3D 토폴로지 관제 객체 토글
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 11 }}>
@@ -333,7 +448,7 @@ export const RightMapOverlay: React.FC<RightMapOverlayProps> = ({
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleLayer(item.key)}
-                        style={{ accentColor: '#06b6d4', width: 15, height: 15, cursor: 'pointer' }}
+                        style={{ accentColor: '#a855f7', width: 15, height: 15, cursor: 'pointer' }}
                       />
                     </label>
                   );
