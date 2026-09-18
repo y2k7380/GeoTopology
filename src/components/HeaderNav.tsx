@@ -17,6 +17,7 @@ import {
   History,
   CornerDownLeft,
   Server,
+  BookOpen,
 } from 'lucide-react';
 import { KOREA_POSTAL_DIRECTORY } from '../data/koreaPostalData';
 import { FREE_MAP_OPTIONS } from '../data/mapStyles';
@@ -891,6 +892,32 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
           </button>
 
           <div style={{ width: 1, height: 20, background: 'rgba(255, 255, 255, 0.1)' }} />
+
+          {/* 개발자 가이드 및 인터랙티브 샘플 포털 링크 */}
+          <a
+            href="/guide.html"
+            target="_blank"
+            rel="noreferrer"
+            title="개발자 가이드 및 라이브 샘플 포털 열기"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 6,
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              color: '#38bdf8',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'all 0.15s',
+            }}
+          >
+            <BookOpen size={15} />
+            가이드 & 샘플
+          </a>
 
           {/* 장애 시뮬레이터 토글 */}
           {!hasActiveSimulation ? (

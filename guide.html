@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GeoTopology 3D - 개발자 가이드 및 인터랙티브 샘플 포털</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <style>
+      :root {
+        --bg-main: #070b14;
+        --bg-card: #0d1527;
+        --bg-sidebar: #0a1020;
+        --border-color: rgba(56, 189, 248, 0.2);
+        --accent-cyan: #38bdf8;
+        --accent-blue: #3b82f6;
+        --accent-emerald: #10b981;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        --code-bg: #050811;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        background-color: var(--bg-main);
+        color: var(--text-primary);
+        line-height: 1.6;
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* 사이드바 */
+      aside {
+        width: 300px;
+        background-color: var(--bg-sidebar);
+        border-right: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+      }
+      .brand-header {
+        padding: 24px 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .brand-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #0284c7, #6366f1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: #fff;
+        font-size: 18px;
+        box-shadow: 0 0 15px rgba(2, 132, 199, 0.5);
+      }
+      .brand-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -0.3px;
+      }
+      .brand-badge {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--accent-cyan);
+        background: rgba(56, 189, 248, 0.15);
+        padding: 1px 6px;
+        border-radius: 4px;
+        margin-top: 2px;
+      }
+
+      .nav-menu {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .nav-category {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 12px 10px 4px;
+      }
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.15s;
+      }
+      .nav-item:hover, .nav-item.active {
+        color: #fff;
+        background: rgba(56, 189, 248, 0.1);
+      }
+      .nav-item.active {
+        color: var(--accent-cyan);
+        font-weight: 600;
+      }
+
+      /* 메인 본문 */
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 40px 60px;
+        scroll-behavior: smooth;
+      }
+      .doc-content {
+        max-width: 1060px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 48px;
+      }
+
+      h1 { font-size: 32px; font-weight: 800; color: #fff; margin-bottom: 12px; letter-spacing: -0.5px; }
+      h2 { font-size: 22px; font-weight: 700; color: #fff; margin-top: 20px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+      h3 { font-size: 16px; font-weight: 600; color: var(--accent-cyan); margin-top: 16px; margin-bottom: 8px; }
+      p { color: #cbd5e1; font-size: 14.5px; line-height: 1.7; margin-bottom: 12px; }
+
+      /* 코드 블럭 */
+      .code-container {
+        position: relative;
+        margin: 14px 0 20px;
+        background: var(--code-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .code-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        font-size: 12px;
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .copy-btn {
+        background: rgba(56, 189, 248, 0.15);
+        color: var(--accent-cyan);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 4px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .copy-btn:hover { background: rgba(56, 189, 248, 0.3); }
+      pre {
+        padding: 16px;
+        overflow-x: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+
+      /* 표 */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 13.5px;
+      }
+      th, td {
+        padding: 10px 14px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      th {
+        background: rgba(56, 189, 248, 0.08);
+        color: var(--accent-cyan);
+        font-weight: 600;
+      }
+      td { color: #cbd5e1; }
+      tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+      /* 배지 및 태그 */
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11.5px;
+        font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .tag-prop { background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan); }
+      .tag-type { background: rgba(168, 85, 247, 0.15); color: #c084fc; }
+
+      /* 라이브 샘플 카드 */
+      .sample-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+      .sample-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        transition: transform 0.2s, border-color 0.2s;
+      }
+      .sample-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-cyan);
+      }
+      .sample-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .sample-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        flex: 1;
+      }
+      .sample-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #0284c7, #2563eb);
+        color: #fff;
+        text-decoration: none;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 6px;
+      }
+      .sample-btn:hover {
+        background: linear-gradient(135deg, #0369a1, #1d4ed8);
+      }
+
+      /* 라이브 인터랙티브 뷰어 프레임 */
+      .live-preview-box {
+        background: #030712;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        margin: 20px 0;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      }
+      .preview-tabs {
+        display: flex;
+        background: rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid var(--border-color);
+        padding: 0 12px;
+      }
+      .preview-tab {
+        padding: 12px 18px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+      }
+      .preview-tab.active {
+        color: var(--accent-cyan);
+        border-bottom-color: var(--accent-cyan);
+      }
+      .preview-iframe {
+        width: 100%;
+        height: 540px;
+        border: none;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 1. 사이드바 -->
+    <aside>
+      <div class="brand-header">
+        <div class="brand-logo">G3</div>
+        <div>
+          <div class="brand-title">GeoTopology 3D</div>
+          <span class="brand-badge">DEVELOPER DOCS v1.0</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-category">시작하기 (Getting Started)</div>
+        <a href="#intro" class="nav-item active">라이브러리 소개</a>
+        <a href="#quickstart" class="nav-item">1분 퀵 스타트</a>
+        <a href="#install" class="nav-item">패키지 설치법</a>
+
+        <div class="nav-category">인터랙티브 샘플 (Live Samples)</div>
+        <a href="#live-samples" class="nav-item">샘플 1: 기본 뷰어</a>
+        <a href="#live-samples" class="nav-item">샘플 2: 실시간 REST/SNMP</a>
+        <a href="#live-samples" class="nav-item">샘플 3: 모듈형 단독 맵</a>
+        <a href="#live-samples" class="nav-item">샘플 4: 순수 HTML 임베드</a>
+
+        <div class="nav-category">API 명세 (API Reference)</div>
+        <a href="#props" class="nav-item">GeoTopologyViewer Props</a>
+        <a href="#submodules" class="nav-item">원자적 서브 컴포넌트</a>
+        <a href="#types" class="nav-item">TypeScript 타입 스펙</a>
+
+        <div class="nav-category">심화 환경 연동 (Advanced)</div>
+        <a href="#data-binding" class="nav-item">REST / SNMP 연동 패턴</a>
+        <a href="#offline" class="nav-item">100% 폐쇄망 PMTiles 설정</a>
+        <a href="#nextjs" class="nav-item">Next.js (SSR) 통합 가이드</a>
+      </nav>
+
+      <div style="padding: 16px; border-top: 1px solid var(--border-color);">
+        <a href="/" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; background: rgba(56,189,248,0.15); border: 1px solid var(--border-color); border-radius: 8px; color: var(--accent-cyan); text-decoration: none; font-size: 13px; font-weight: 600;">
+          🖥️ 관제 센터 메인으로 복귀
+        </a>
+      </div>
+    </aside>
+
+    <!-- 2. 메인 문서 영역 -->
+    <main>
+      <div class="doc-content">
+        <!-- 인트로 -->
+        <section id="intro">
+          <h1>GeoTopology 3D 개발자 가이드</h1>
+          <p>
+            대한민국 17개 광역시도, 250개 시군구, 80개 주요 통신국사, 714대 네트워크 장비 및 983개 기간 광회선을 3D WebGL GPU 가속으로 관제하는 <strong>React 독립 컴포넌트 라이브러리</strong>입니다.
+          </p>
+        </section>
+
+        <!-- 실시간 라이브 샘플 체험 섹션 -->
+        <section id="live-samples">
+          <h2>🚀 실시간 인터랙티브 샘플 러너 (Live Playground)</h2>
+          <p>가이드에서 제공하는 각 시나리오별 샘플을 이 페이지에서 즉시 실시간으로 실행하고 체험할 수 있습니다.</p>
+
+          <div class="live-preview-box">
+            <div class="preview-tabs">
+              <div class="preview-tab active" onclick="switchSample('/samples/quickstart.html', this)">샘플 1: Quick Start</div>
+              <div class="preview-tab" onclick="switchSample('/samples/custom-data.html', this)">샘플 2: 실시간 REST/SNMP 연동</div>
+              <div class="preview-tab" onclick="switchSample('/samples/headless.html', this)">샘플 3: 모듈형 단독 맵</div>
+              <div class="preview-tab" onclick="switchSample('/samples/standalone-vanilla.html', this)">샘플 4: 순수 HTML 임베드</div>
+            </div>
+            <iframe id="sampleFrame" class="preview-iframe" src="/samples/quickstart.html" title="Interactive Sample Preview"></iframe>
+          </div>
+
+          <div class="sample-grid">
+            <div class="sample-card">
+              <div class="sample-title">
+                <span>1. 1분 퀵 스타트</span>
+                <span class="tag tag-prop">기본 마운트</span>
+              </div>
+              <div class="sample-desc">기본 탑재된 전국 714대 장비 토폴로지를 단 3줄의 코드로 마운트하는 가장 기초적인 예제입니다.</div>
+              <a href="/samples/quickstart.html" target="_blank" class="sample-btn">새 창에서 전체 화면으로 실행 ↗</a>
+            </div>
+
+            <div class="sample-card">
+              <div class="sample-title">
+                <span>2. 실시간 REST/SNMP 연동</span>
+                <span class="tag tag-type">실시간 텔레메트리</span>
+              </div>
+              <div class="sample-desc">외부 백엔드 API에서 주기적으로 수신한 장비 메트릭(CPU, 트래픽)을 뷰어에 바인딩하고 장애를 주입합니다.</div>
+              <a href="/samples/custom-data.html" target="_blank" class="sample-btn">새 창에서 전체 화면으로 실행 ↗</a>
+            </div>
+
+            <div class="sample-card">
+              <div class="sample-title">
+                <span>3. 모듈형 단독 3D 맵</span>
+                <span class="tag tag-prop">TopologyMap 분리</span>
+              </div>
+              <div class="sample-desc">헤더나 기본 대시보드 없이 `TopologyMap`과 `NodeDetailDrawer`만 독립 컴포넌트로 추출하여 구성합니다.</div>
+              <a href="/samples/headless.html" target="_blank" class="sample-btn">새 창에서 전체 화면으로 실행 ↗</a>
+            </div>
+
+            <div class="sample-card">
+              <div class="sample-title">
+                <span>4. 순수 HTML / 레거시 연동</span>
+                <span class="tag tag-type">Zero-Build iframe</span>
+              </div>
+              <div class="sample-desc">React나 번들러 없이 전통적인 Spring MVC, JSP, PHP 콘솔에서 iframe 한 줄로 3D 관제 엔진을 탑재합니다.</div>
+              <a href="/samples/standalone-vanilla.html" target="_blank" class="sample-btn">새 창에서 전체 화면으로 실행 ↗</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- 퀵 스타트 코드 -->
+        <section id="quickstart">
+          <h2>⚡ 1분 퀵 스타트 (Quick Start)</h2>
+          <p>설치 후 프로젝트의 어떤 React 화면이든 다음과 같이 컴포넌트를 마운트하십시오.</p>
+
+          <div class="code-container">
+            <div class="code-header">
+              <span>NetworkDashboard.tsx</span>
+              <button class="copy-btn" onclick="copyCode(this)">코드 복사</button>
+            </div>
+            <pre><code>import React from 'react';
+import { GeoTopologyViewer } from 'geotopology';
+import 'geotopology/dist/style.css'; // 라이브러리 전용 다크 글래스모피즘 스타일
+
+export function NetworkDashboard() {
+  return (
+    &lt;div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}&gt;
+      &lt;GeoTopologyViewer
+        onNodeSelect={(node) =&gt; {
+          console.log('선택된 장비/국사:', node);
+        }}
+      /&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+          </div>
+        </section>
+
+        <!-- 패키지 설치 -->
+        <section id="install">
+          <h2>📦 패키지 설치 (Installation)</h2>
+          <div class="code-container">
+            <div class="code-header">
+              <span>Terminal</span>
+              <button class="copy-btn" onclick="copyCode(this)">명령어 복사</button>
+            </div>
+            <pre><code># npm 설치 시
+npm install geotopology
+
+# yarn 설치 시
+yarn add geotopology
+
+# pnpm 설치 시
+pnpm add geotopology</code></pre>
+          </div>
+        </section>
+
+        <!-- Props 명세표 -->
+        <section id="props">
+          <h2>🔧 GeoTopologyViewer Props API 명세</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Prop 이름</th>
+                <th>타입</th>
+                <th>기본값</th>
+                <th>설명</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="tag tag-prop">nodes</span></td>
+                <td><span class="tag tag-type">NetworkNode[]</span></td>
+                <td>기본 714대 장비</td>
+                <td>사용자 정의 관제 대상 장비/노드 데이터셋</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">edges</span></td>
+                <td><span class="tag tag-type">NetworkEdge[]</span></td>
+                <td>기본 983개 회선</td>
+                <td>사용자 정의 백본/전송망 광회선 데이터셋</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">initialMapStyle</span></td>
+                <td><span class="tag tag-type">MapStyleType</span></td>
+                <td>'OFFLINE_PMTILES_DARK'</td>
+                <td>초기 지도 스타일 (오프라인 벡터, OSM, 위성 등)</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">initial3DMode</span></td>
+                <td><span class="tag tag-type">boolean</span></td>
+                <td>true</td>
+                <td>초기 3D 피치 각도 및 실린더 타워 활성화</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">showNav</span></td>
+                <td><span class="tag tag-type">boolean</span></td>
+                <td>true</td>
+                <td>상단 옴니서치 및 장애 시뮬레이션 툴바 표시</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">showDashboard</span></td>
+                <td><span class="tag tag-type">boolean</span></td>
+                <td>true</td>
+                <td>좌측 알람 통계, 이벤트, 장비 리스트 대시보드 표시</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">showLegend</span></td>
+                <td><span class="tag tag-type">boolean</span></td>
+                <td>true</td>
+                <td>좌측 하단 3D 범례(장비 종류, 케이블 색상) 표시</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">showRightOverlay</span></td>
+                <td><span class="tag tag-type">boolean</span></td>
+                <td>true</td>
+                <td>우측 지도 테마 및 백본/경계선 레이어 온/오프 표시</td>
+              </tr>
+              <tr>
+                <td><span class="tag tag-prop">onNodeSelect</span></td>
+                <td><span class="tag tag-type">(node) => void</span></td>
+                <td>undefined</td>
+                <td>노드 클릭 시 호출되는 이벤트 콜백 함수</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- 데이터 연동 패턴 -->
+        <section id="data-binding">
+          <h2>📡 REST / SNMP / WebSocket 실시간 데이터 연동</h2>
+          <p>자체 백엔드 API에서 주기적으로 수신한 노드 및 링크 데이터를 Props로 주입하면, 내부 상태가 자동으로 리렌더링되어 실시간 모니터링이 수행됩니다.</p>
+
+          <div class="code-container">
+            <div class="code-header">
+              <span>LivePollingExample.tsx</span>
+              <button class="copy-btn" onclick="copyCode(this)">코드 복사</button>
+            </div>
+            <pre><code>import React, { useState, useEffect } from 'react';
+import { GeoTopologyViewer, type NetworkNode, type NetworkEdge } from 'geotopology';
+import 'geotopology/dist/style.css';
+
+export function LiveOpsViewer() {
+  const [nodes, setNodes] = useState<NetworkNode[]>([]);
+  const [edges, setEdges] = useState<NetworkEdge[]>([]);
+
+  useEffect(() => {
+    async function fetchLiveTopology() {
+      const [nodeData, edgeData] = await Promise.all([
+        fetch('/api/v1/topology/nodes').then(r => r.json()),
+        fetch('/api/v1/topology/edges').then(r => r.json())
+      ]);
+      setNodes(nodeData);
+      setEdges(edgeData);
+    }
+
+    fetchLiveTopology();
+    const interval = setInterval(fetchLiveTopology, 5000); // 5초 폴링
+    return () => clearInterval(interval);
+  }, []);
+
+  return &lt;GeoTopologyViewer nodes={nodes} edges={edges} /&gt;;
+}</code></pre>
+          </div>
+        </section>
+
+        <!-- 100% 폐쇄망 오프라인 설정 -->
+        <section id="offline">
+          <h2>💾 100% 폐쇄망 오프라인 (Air-Gapped) 설정</h2>
+          <p>
+            국가 중요 시설, 금융망, 국방망 등 외부 인터넷이 단절된 환경에서는 <code>public/korea.pmtiles</code> (73MB) 파일만 정적 자원 서버에 올려두면 타일 CDN 호출 없이 100% 로컬에서 동작합니다.
+          </p>
+          <div class="code-container">
+            <div class="code-header">
+              <span>오프라인 모드 설정</span>
+            </div>
+            <pre><code>&lt;GeoTopologyViewer
+  initialMapStyle="OFFLINE_PMTILES_DARK" // 기본값 (100% 완전 로컬 구동)
+/&gt;</code></pre>
+          </div>
+        </section>
+
+        <!-- Next.js 통합 -->
+        <section id="nextjs">
+          <h2>⚡ Next.js (SSR) 통합 가이드</h2>
+          <p>Next.js의 서버 사이드 렌더링(SSR) 환경에서는 <code>next/dynamic</code>을 사용해 클라이언트 전용으로 마운트합니다.</p>
+
+          <div class="code-container">
+            <div class="code-header">
+              <span>app/monitoring/page.tsx (Next.js App Router)</span>
+              <button class="copy-btn" onclick="copyCode(this)">코드 복사</button>
+            </div>
+            <pre><code>'use client';
+
+import dynamic from 'next/dynamic';
+import 'geotopology/dist/style.css';
+
+const GeoTopologyViewer = dynamic(
+  () => import('geotopology').then(mod => mod.GeoTopologyViewer),
+  { ssr: false, loading: () => &lt;div style={{ color: '#fff', padding: 20 }}&gt;3D 관제 엔진 로딩 중...&lt;/div&gt; }
+);
+
+export default function MonitoringPage() {
+  return (
+    &lt;div style={{ width: '100vw', height: '100vh' }}&gt;
+      &lt;GeoTopologyViewer /&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      function switchSample(url, el) {
+        document.getElementById('sampleFrame').src = url;
+        document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+      }
+
+      function copyCode(button) {
+        const pre = button.parentElement.nextElementSibling;
+        const text = pre.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          const original = button.innerText;
+          button.innerText = '복사됨! ✓';
+          button.style.background = 'rgba(16, 185, 129, 0.3)';
+          button.style.color = '#86efac';
+          setTimeout(() => {
+            button.innerText = original;
+            button.style.background = 'rgba(56, 189, 248, 0.15)';
+            button.style.color = 'var(--accent-cyan)';
+          }, 2000);
+        });
+      }
+    </script>
+  </body>
+</html>
