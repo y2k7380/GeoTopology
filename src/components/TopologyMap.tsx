@@ -18,7 +18,7 @@ import type { ClusteredTopologyResult } from '../utils/summaryEngine';
 import { computeHierarchicalTopology, ZOOM_THRESHOLDS } from '../utils/summaryEngine';
 import { soundFx } from '../utils/audio';
 
-interface TopologyMapProps {
+export interface TopologyMapProps {
   allNodes: NetworkNode[];
   allEdges: NetworkEdge[];
   selectedNode: NetworkNode | RegionSummaryNode | null;

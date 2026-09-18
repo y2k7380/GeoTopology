@@ -19,7 +19,7 @@ import type { MapStyleType } from '../data/mapStyles';
 import type { LayerVisibilityConfig } from '../types/topology';
 import { soundFx } from '../utils/audio';
 
-interface RightMapOverlayProps {
+export interface RightMapOverlayProps {
   currentMapStyle: MapStyleType;
   onChangeMapStyle: (style: MapStyleType) => void;
   layerConfig: LayerVisibilityConfig;

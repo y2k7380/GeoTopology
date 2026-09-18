@@ -572,3 +572,9 @@ export const FREE_MAP_OPTIONS: MapStyleOption[] = [
     style: SATELLITE_FREE_STYLE,
   },
 ];
+
+export const getDefaultMapStyle = (): MapStyleType => 'OFFLINE_PMTILES_DARK';
+
+export const isOfflineStyle = (styleId: MapStyleType): boolean => {
+  return styleId.startsWith('OFFLINE_');
+};

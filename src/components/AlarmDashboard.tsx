@@ -21,7 +21,7 @@ import {
 import type { NetworkNode, NetworkEdge, AlarmSeverity, DeviceCategory, RegionSummaryNode } from '../types/topology';
 import { soundFx } from '../utils/audio';
 
-interface AlarmDashboardProps {
+export interface AlarmDashboardProps {
   nodes: NetworkNode[];
   edges: NetworkEdge[];
   filterSeverity: AlarmSeverity | 'ALL';

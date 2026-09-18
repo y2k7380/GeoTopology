@@ -24,7 +24,7 @@ import type { MapStyleType } from '../data/mapStyles';
 import type { PostalAddressItem, LabelConfig, NetworkNode, NetworkEdge } from '../types/topology';
 import { soundFx } from '../utils/audio';
 
-interface HeaderNavProps {
+export interface HeaderNavProps {
   onSelectSearchTarget: (target: { lat: number; lng: number; zoom?: number; pitch?: number }, node?: NetworkNode) => void;
   is3DMode: boolean;
   onToggle3DMode: () => void;

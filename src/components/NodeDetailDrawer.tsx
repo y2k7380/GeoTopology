@@ -15,7 +15,7 @@ import {
 import type { NetworkNode, RegionSummaryNode, AlarmSeverity, NetworkEdge } from '../types/topology';
 import { soundFx } from '../utils/audio';
 
-interface NodeDetailDrawerProps {
+export interface NodeDetailDrawerProps {
   selectedNode: NetworkNode | RegionSummaryNode | null;
   onClose: () => void;
   onZoomToNode: (lat: number, lng: number, zoom: number) => void;

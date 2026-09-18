@@ -47,6 +47,24 @@ export interface SwitchDetails {
   spanningTreeState: 'STABLE' | 'TOPOLOGY_CHANGE' | 'LOOP_DETECTED';
 }
 
+export type NodeType = DeviceType;
+
+export interface NodeMetrics {
+  cpuPercent: number;
+  memoryPercent: number;
+  tempCelsius: number;
+  trafficGbps: number;
+  portCount: number;
+  activePorts: number;
+}
+
+export interface HardwareSpec {
+  powerWatts?: number;
+  fanRpm?: number;
+  psuRedundancy?: string;
+  firmwareVersion?: string;
+}
+
 export interface NetworkNode {
   id: string;
   name: string;
@@ -65,17 +83,11 @@ export interface NetworkNode {
   ipAddress: string;
   vendor: string;
   model: string;
-  metrics: {
-    cpuPercent: number;
-    memoryPercent: number;
-    tempCelsius: number;
-    trafficGbps: number;
-    portCount: number;
-    activePorts: number;
-  };
+  metrics: NodeMetrics;
   alarms: AlarmItem[];
   transmissionDetails?: TransmissionDetails;
   switchDetails?: SwitchDetails;
+  hardwareSpec?: HardwareSpec;
 }
 
 export interface NetworkEdge {
@@ -181,5 +193,20 @@ export const DEFAULT_LAYER_CONFIG: LayerVisibilityConfig = {
   showAlarmPulses: true,
 
   lodMode: 'SMART_AUTO', // 기본값: 줌아웃 시 조잡함 방지 스마트 자동 정돈
+};
+
+export const LAYER_PRESETS: Record<'DEFAULT' | 'MINIMAL' | 'MAXIMUM', LayerVisibilityConfig> = {
+  DEFAULT: DEFAULT_LAYER_CONFIG,
+  MINIMAL: {
+    ...DEFAULT_LAYER_CONFIG,
+    showMuniBorders: false,
+    showHighways: false,
+    showWaterways: false,
+    showMountainPeaks: false,
+  },
+  MAXIMUM: {
+    ...DEFAULT_LAYER_CONFIG,
+    lodMode: 'ALWAYS_FULL',
+  },
 };
 

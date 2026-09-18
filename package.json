@@ -1,13 +1,36 @@
 {
   "name": "geotopology",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Enterprise-grade 3D Nationwide Telecom Network Topology & NOC Integrated Monitoring Viewer for React",
   "type": "module",
+  "main": "./dist/geotopology.cjs.js",
+  "module": "./dist/geotopology.es.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/geotopology.es.js",
+      "require": "./dist/geotopology.cjs.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./style.css": "./dist/geotopology.css",
+    "./dist/style.css": "./dist/geotopology.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:app": "tsc -b && vite build",
+    "build:lib": "vite build --config vite.config.lib.ts && tsc -p tsconfig.lib.json",
+    "build": "npm run build:app && npm run build:lib",
     "lint": "oxlint",
     "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
   },
   "dependencies": {
     "@deck.gl/geo-layers": "^9.4.0",
