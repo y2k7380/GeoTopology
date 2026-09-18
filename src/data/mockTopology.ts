@@ -1,28 +1,121 @@
 import type { NetworkNode, NetworkEdge, AlarmItem, AlarmSeverity } from '../types/topology';
 import { KOREA_POSTAL_DIRECTORY } from './koreaPostalData';
 
-// 경보 샘플 템플릿
-const ALARM_TEMPLATES = [
-  { severity: 'CRITICAL' as AlarmSeverity, code: 'ALM_OPT_LOS', title: 'Optical Loss of Signal', desc: '100G DWDM Trunk 광신호 전면 손실 발생' },
-  { severity: 'CRITICAL' as AlarmSeverity, code: 'ALM_BGP_DOWN', title: 'BGP Peer Session Down', desc: 'Core 백본 BGP 이중화 세션 끊김' },
-  { severity: 'MAJOR' as AlarmSeverity, code: 'ALM_PORT_FLAP', title: 'Interface Link Flapping', desc: '10G 이더넷 포트 지속적 링크 플래핑 발생' },
-  { severity: 'MAJOR' as AlarmSeverity, code: 'ALM_HIGH_TEMP', title: 'Chassis Temperature High', desc: '섀시 내부 온도 기준치(65°C) 초과' },
-  { severity: 'MINOR' as AlarmSeverity, code: 'ALM_FAN_WARN', title: 'Fan Tray 2 Speed Degradation', desc: '냉각 팬 회전수 이상 감지 (RPM 저하)' },
-  { severity: 'MINOR' as AlarmSeverity, code: 'ALM_UTIL_HIGH', title: 'Bandwidth Threshold 80%', desc: '피크 트래픽 80% 임계치 도달' },
-];
+// 전국 주요 국사 장비 및 산악 중계소 토폴로지 데이터 생성기
 
 export function generateInitialTopology(): { nodes: NetworkNode[]; edges: NetworkEdge[] } {
   const nodes: NetworkNode[] = [];
   const edges: NetworkEdge[] = [];
 
-  // 1. 각 통신 국사마다 3~6개의 세부 네트워크 장비 노드 생성
+  // 1. 각 통신 국사마다 전송장비(ROADM/POTN/PTN), 스위치(L3/L2), 라우터(Core/Agg) 배치
   KOREA_POSTAL_DIRECTORY.forEach((station, stationIdx) => {
     const devicesInStation = [
-      { role: 'CORE_ROUTER' as const, suffix: 'CR01', model: 'Cisco 8808', vendor: 'Cisco', alt: 180 },
-      { role: 'AGGREGATION_ROUTER' as const, suffix: 'AR01', model: 'Juniper PTX10001', vendor: 'Juniper', alt: 140 },
-      { role: 'OPTICAL_MUX' as const, suffix: 'ROADM01', model: 'Nokia 1830 PSS', vendor: 'Nokia', alt: 110 },
-      { role: 'DIST_SWITCH' as const, suffix: 'DS01', model: 'Arista 7280R3', vendor: 'Arista', alt: 80 },
-      { role: 'ACCESS_SWITCH' as const, suffix: 'AS01', model: 'Dasan V5824G', vendor: 'Dasan Networks', alt: 50 },
+      // 전송장비 군 (Transmission Optical Equipment)
+      {
+        role: 'OPTICAL_DWDM' as const,
+        category: 'TRANSMISSION' as const,
+        suffix: 'ROADM01',
+        model: 'Nokia 1830 PSS-32',
+        vendor: 'Nokia',
+        alt: 190,
+        transmissionDetails: {
+          wavelengthNm: Number((1545.32 + (stationIdx % 16) * 0.8).toFixed(2)),
+          opticalPowerDbm: Number((-12.5 - (stationIdx % 8) * 0.9).toFixed(1)),
+          channelCount: 96,
+          ringName: stationIdx < 12 ? '수도권 제1광전송링' : stationIdx < 24 ? '영남권 메트로광링' : '호남/충청 광전송망',
+          laserState: 'ACTIVE' as 'ACTIVE' | 'WARNING' | 'FAIL',
+        },
+      },
+      {
+        role: 'PACKET_POTN' as const,
+        category: 'TRANSMISSION' as const,
+        suffix: 'POTN01',
+        model: 'Cowiwer POTN-1000',
+        vendor: 'Cowiwer',
+        alt: 160,
+        transmissionDetails: {
+          wavelengthNm: Number((1550.92 + (stationIdx % 8) * 0.8).toFixed(2)),
+          opticalPowerDbm: Number((-14.0 - (stationIdx % 5) * 0.7).toFixed(1)),
+          channelCount: 48,
+          ringName: '전국 백본 패킷광전송망(POTN)',
+          laserState: 'ACTIVE' as 'ACTIVE' | 'WARNING' | 'FAIL',
+        },
+      },
+      {
+        role: 'MSPP_PTN' as const,
+        category: 'TRANSMISSION' as const,
+        suffix: 'PTN01',
+        model: 'Ubiquoss PTN-500',
+        vendor: 'Ubiquoss',
+        alt: 130,
+        transmissionDetails: {
+          wavelengthNm: 1310.0,
+          opticalPowerDbm: -11.2,
+          channelCount: 16,
+          ringName: '모바일 백홀 PTN망',
+          laserState: 'ACTIVE' as 'ACTIVE' | 'WARNING' | 'FAIL',
+        },
+      },
+      // 스위치 군 (Switching Equipment)
+      {
+        role: 'CORE_L3_SWITCH' as const,
+        category: 'SWITCH' as const,
+        suffix: 'CS01',
+        model: 'Arista 7280R3-48YC',
+        vendor: 'Arista',
+        alt: 110,
+        switchDetails: {
+          switchingCapacityGbps: 12800,
+          vlanCount: 128,
+          macTableCount: 32400,
+          spanningTreeState: 'STABLE' as const,
+        },
+      },
+      {
+        role: 'DIST_L3_SWITCH' as const,
+        category: 'SWITCH' as const,
+        suffix: 'DS01',
+        model: 'Ubiquoss E6000-24X',
+        vendor: 'Ubiquoss',
+        alt: 85,
+        switchDetails: {
+          switchingCapacityGbps: 1920,
+          vlanCount: 64,
+          macTableCount: 16384,
+          spanningTreeState: 'STABLE' as const,
+        },
+      },
+      {
+        role: 'ACCESS_L2_SWITCH' as const,
+        category: 'SWITCH' as const,
+        suffix: 'AS01',
+        model: 'Dasan V2824G-PoE',
+        vendor: 'Dasan Networks',
+        alt: 60,
+        switchDetails: {
+          switchingCapacityGbps: 128,
+          vlanCount: 32,
+          macTableCount: 8192,
+          spanningTreeState: 'STABLE' as const,
+        },
+      },
+      // 라우터 군 (Routing Equipment)
+      {
+        role: 'CORE_ROUTER' as const,
+        category: 'ROUTER' as const,
+        suffix: 'CR01',
+        model: 'Cisco 8808',
+        vendor: 'Cisco',
+        alt: 210,
+      },
+      {
+        role: 'AGGREGATION_ROUTER' as const,
+        category: 'ROUTER' as const,
+        suffix: 'AR01',
+        model: 'Juniper PTX10001',
+        vendor: 'Juniper',
+        alt: 140,
+      },
     ];
 
     const stationNodes: NetworkNode[] = [];
@@ -31,73 +124,84 @@ export function generateInitialTopology(): { nodes: NetworkNode[]; edges: Networ
       const nodeId = `NODE_${station.postalCode}_${dev.suffix}`;
       
       // 장비별 지리적 위치 미세 분산 (국사 중심에서 수십 미터 반경으로 3D 분산)
-      const offsetLat = (devIdx - 2) * 0.0006;
-      const offsetLng = ((devIdx % 2 === 0 ? 1 : -1) * (devIdx + 1)) * 0.0007;
+      const offsetLat = (devIdx - 3) * 0.00045;
+      const offsetLng = ((devIdx % 2 === 0 ? 1 : -1) * (devIdx + 1)) * 0.00055;
 
-      // 특정 주요 국사 및 장비에 현실적인 경보 부여
+      // 특정 주요 국사 및 장비에 현실적인 경보 부여 (전송망 광손실, 스위치 루프 등)
       const alarms: AlarmItem[] = [];
       let status: AlarmSeverity = 'NORMAL';
 
-      // 강남(06234), 판교(13494), 센텀(48058), 대전(34141), 세종(30151) 등에 경보 주입
-      if (station.postalCode === '06234' && dev.suffix === 'CR01') {
+      // 강남(06234) ROADM 전송장비 광신호 단선
+      if (station.postalCode === '06234' && dev.suffix === 'ROADM01') {
         status = 'CRITICAL';
         alarms.push({
           id: `ALM_${nodeId}_01`,
           severity: 'CRITICAL',
-          code: ALARM_TEMPLATES[0].code,
-          title: ALARM_TEMPLATES[0].title,
-          description: ALARM_TEMPLATES[0].desc,
-          timestamp: '2026-09-16 16:42:10',
+          code: 'ALM_OPT_LOS',
+          title: 'ROADM Optical Loss of Signal',
+          description: '100G DWDM 16번 파장(1550.92nm) 주선로 광신호 전면 손실 발생',
+          timestamp: '2026-09-18 14:42:10',
         });
-      } else if (station.postalCode === '13494' && dev.suffix === 'AR01') {
+        if (dev.transmissionDetails) {
+          dev.transmissionDetails.laserState = 'FAIL';
+          dev.transmissionDetails.opticalPowerDbm = -38.5;
+        }
+      } else if (station.postalCode === '06234' && dev.suffix === 'CR01') {
+        status = 'CRITICAL';
+        alarms.push({
+          id: `ALM_${nodeId}_01b`,
+          severity: 'CRITICAL',
+          code: 'ALM_BGP_DOWN',
+          title: 'Core Router BGP Session Down',
+          description: '전송망 단선으로 인한 Core 백본 BGP 이중화 세션 단절',
+          timestamp: '2026-09-18 14:42:12',
+        });
+      } else if (station.postalCode === '13494' && dev.suffix === 'CS01') {
+        // 판교(13494) 코어 L3 스위치 포트 플래핑
         status = 'MAJOR';
         alarms.push({
           id: `ALM_${nodeId}_02`,
           severity: 'MAJOR',
-          code: ALARM_TEMPLATES[2].code,
-          title: ALARM_TEMPLATES[2].title,
-          description: ALARM_TEMPLATES[2].desc,
-          timestamp: '2026-09-16 16:55:04',
+          code: 'ALM_PORT_FLAP',
+          title: 'Core Switch 100G Port Flapping',
+          description: 'QSFP28 트렁크 포트 1/1/2 지속적인 링크 플래핑 발생',
+          timestamp: '2026-09-18 14:55:04',
         });
-      } else if (station.postalCode === '48058' && dev.suffix === 'ROADM01') {
-        status = 'CRITICAL';
+      } else if (station.postalCode === '48058' && dev.suffix === 'POTN01') {
+        // 센텀(48058) POTN 전송장비 수신 감도 저하
+        status = 'MAJOR';
         alarms.push({
           id: `ALM_${nodeId}_03`,
-          severity: 'CRITICAL',
-          code: ALARM_TEMPLATES[1].code,
-          title: ALARM_TEMPLATES[1].title,
-          description: ALARM_TEMPLATES[1].desc,
-          timestamp: '2026-09-16 17:02:18',
+          severity: 'MAJOR',
+          code: 'ALM_OPT_PWR_LOW',
+          title: 'POTN Optical Power Degraded',
+          description: '광 감쇄 현상으로 수신 감도 임계치(-22dBm) 초과 도달',
+          timestamp: '2026-09-18 15:02:18',
         });
+        if (dev.transmissionDetails) {
+          dev.transmissionDetails.laserState = 'WARNING';
+          dev.transmissionDetails.opticalPowerDbm = -24.2;
+        }
       } else if (station.postalCode === '34141' && dev.suffix === 'DS01') {
+        // 대전(34141) L3 집선 스위치 고부하
         status = 'MINOR';
         alarms.push({
           id: `ALM_${nodeId}_04`,
           severity: 'MINOR',
-          code: ALARM_TEMPLATES[4].code,
-          title: ALARM_TEMPLATES[4].title,
-          description: ALARM_TEMPLATES[4].desc,
-          timestamp: '2026-09-16 17:08:44',
+          code: 'ALM_SWITCH_HIGH_UTIL',
+          title: 'L3 Switch Traffic Peak 85%',
+          description: '연구단지 백본 데이터 송출 급증으로 포트 버퍼 임계치 도달',
+          timestamp: '2026-09-18 15:08:44',
         });
-      } else if (stationIdx % 7 === 0 && devIdx === 0) {
-        status = 'MAJOR';
-        alarms.push({
-          id: `ALM_${nodeId}_05`,
-          severity: 'MAJOR',
-          code: ALARM_TEMPLATES[3].code,
-          title: ALARM_TEMPLATES[3].title,
-          description: ALARM_TEMPLATES[3].desc,
-          timestamp: '2026-09-16 16:30:12',
-        });
-      } else if (stationIdx % 5 === 0 && devIdx === 3) {
+      } else if (stationIdx % 6 === 0 && dev.suffix === 'PTN01') {
         status = 'MINOR';
         alarms.push({
-          id: `ALM_${nodeId}_06`,
+          id: `ALM_${nodeId}_05`,
           severity: 'MINOR',
-          code: ALARM_TEMPLATES[5].code,
-          title: ALARM_TEMPLATES[5].title,
-          description: ALARM_TEMPLATES[5].desc,
-          timestamp: '2026-09-16 16:11:00',
+          code: 'ALM_PTN_SYNC_WARN',
+          title: 'PTN Clock PTP Sync Deviation',
+          description: 'IEEE 1588v2 PTP 패킷 동기화 위상차 50ns 발생',
+          timestamp: '2026-09-18 14:15:00',
         });
       }
 
@@ -105,6 +209,7 @@ export function generateInitialTopology(): { nodes: NetworkNode[]; edges: Networ
         id: nodeId,
         name: `${station.fullAddress.match(/\((.*?)\)/)?.[1] || station.cityDistrict} ${dev.suffix}`,
         type: dev.role,
+        category: dev.category,
         lat: station.lat + offsetLat,
         lng: station.lng + offsetLng,
         altitude: dev.alt,
@@ -119,104 +224,273 @@ export function generateInitialTopology(): { nodes: NetworkNode[]; edges: Networ
         vendor: dev.vendor,
         model: dev.model,
         metrics: {
-          cpuPercent: Math.floor(25 + Math.random() * 55),
-          memoryPercent: Math.floor(40 + Math.random() * 45),
-          tempCelsius: Math.floor(38 + Math.random() * 25),
-          trafficGbps: Number((Math.random() * (dev.role === 'CORE_ROUTER' ? 85 : 20) + 5).toFixed(1)),
-          portCount: dev.role === 'CORE_ROUTER' ? 64 : 48,
-          activePorts: dev.role === 'CORE_ROUTER' ? 52 : 36,
+          cpuPercent: Math.floor(25 + Math.random() * 50),
+          memoryPercent: Math.floor(40 + Math.random() * 40),
+          tempCelsius: Math.floor(38 + Math.random() * 22),
+          trafficGbps: Number((Math.random() * (dev.category === 'TRANSMISSION' ? 95 : dev.category === 'SWITCH' ? 45 : 65) + 8).toFixed(1)),
+          portCount: dev.role === 'CORE_L3_SWITCH' ? 48 : dev.role === 'CORE_ROUTER' ? 64 : 24,
+          activePorts: dev.role === 'CORE_L3_SWITCH' ? 40 : dev.role === 'CORE_ROUTER' ? 52 : 18,
         },
         alarms,
+        transmissionDetails: (dev as any).transmissionDetails,
+        switchDetails: (dev as any).switchDetails,
       };
 
       nodes.push(node);
       stationNodes.push(node);
     });
 
-    // 국사 내부 장비 간 인터링크 (Intra-station Links)
+    // 국사 내부 장비 간 계층적 인터링크 (Intra-station Links: 전송장비 ➔ 코어 라우터 ➔ L3 스위치 ➔ L2 스위치)
     for (let i = 0; i < stationNodes.length - 1; i++) {
       const src = stationNodes[i];
       const tgt = stationNodes[i + 1];
+      const isTransmissionLink = src.category === 'TRANSMISSION' && tgt.category === 'TRANSMISSION';
       edges.push({
         id: `EDGE_INTRA_${src.id}_${tgt.id}`,
         source: src.id,
         target: tgt.id,
         sourceCoordinates: [src.lng, src.lat],
         targetCoordinates: [tgt.lng, tgt.lat],
-        linkType: i === 0 ? 'DIST_10G' : 'ACCESS_1G',
+        linkType: isTransmissionLink ? 'DWDM_OPTICAL_LAMBDA' : (i < 4 ? 'DIST_10G' : 'ACCESS_1G'),
         status: (src.status === 'CRITICAL' || tgt.status === 'CRITICAL') ? 'DOWN' : 'UP',
-        bandwidthGbps: i === 0 ? 40 : 10,
+        bandwidthGbps: isTransmissionLink ? 100 : (i < 4 ? 40 : 10),
         trafficUtilPercent: Math.floor(40 + Math.random() * 45),
-        latencyMs: Number((0.2 + Math.random() * 0.5).toFixed(2)),
+        latencyMs: Number((0.15 + Math.random() * 0.35).toFixed(2)),
         packetLossPercent: 0,
         alarms: [],
       });
     }
   });
 
-  // 2. 전국 주요 코어 라우터 간 3D 백본망 (National Backbone Ring & Mesh)
-  // 대표 코어 노드 선별
-  const coreNodes = nodes.filter(n => n.type === 'CORE_ROUTER');
-  
-  // 서울(종로, 강남) - 판교 - 대전 - 세종 - 대구 - 부산 - 광주 - 전주 - 강원(원주) - 제주를 잇는 대규모 3D 백본망
-  const backbonePairs = [
-    // 서울-판교-대전 축
-    { srcPostal: '03186', tgtPostal: '06234' }, // 광화문 <-> 강남
-    { srcPostal: '06234', tgtPostal: '13494' }, // 강남 <-> 판교
-    { srcPostal: '13494', tgtPostal: '30151' }, // 판교 <-> 세종
-    { srcPostal: '30151', tgtPostal: '34141' }, // 세종 <-> 대전
-    // 대전-대구-부산 축
-    { srcPostal: '34141', tgtPostal: '42194' }, // 대전 <-> 대구
-    { srcPostal: '42194', tgtPostal: '48058' }, // 대구 <-> 부산센텀
-    { srcPostal: '48058', tgtPostal: '44675' }, // 부산 <-> 울산
-    { srcPostal: '48058', tgtPostal: '51435' }, // 부산 <-> 창원
-    // 남부-호남 축
-    { srcPostal: '51435', tgtPostal: '61947' }, // 창원 <-> 광주
-    { srcPostal: '61947', tgtPostal: '54994' }, // 광주 <-> 전주
-    { srcPostal: '54994', tgtPostal: '34141' }, // 전주 <-> 대전
-    // 서해안/인천 축
-    { srcPostal: '07335', tgtPostal: '21998' }, // 여의도 <-> 송도인천
-    { srcPostal: '21998', tgtPostal: '03186' }, // 송도 <-> 광화문
-    // 중부/강원 축
-    { srcPostal: '03186', tgtPostal: '26464' }, // 광화문 <-> 원주
-    { srcPostal: '26464', tgtPostal: '25457' }, // 원주 <-> 강릉
-    { srcPostal: '25457', tgtPostal: '37666' }, // 강릉 <-> 포항
-    { srcPostal: '37666', tgtPostal: '42194' }, // 포항 <-> 대구
-    // 제주 해저 광케이블 연계
-    { srcPostal: '59724', tgtPostal: '63122' }, // 여수 <-> 제주
-    { srcPostal: '61947', tgtPostal: '63565' }, // 광주 <-> 서귀포
+  // 2. 대한민국 전역 전송망(DWDM 400G), 코어 IP망(100G), 메트로 스위치링(40G) 전국망 구성
+  // 대한민국 17개 시도, 80개 주요 국사 및 도서 거점 전체를 촘촘히 엮는 국가 기간망
+  const nationwidePairs: Array<{ srcPostal: string; tgtPostal: string; ringName?: string }> = [
+    // [A] 국가 초고속 엑스선 코어 백본망 (National Super-Backbone Cross-X Trunks)
+    { srcPostal: '03186', tgtPostal: '34141', ringName: '경부 제1백본 엑스선' }, // 광화문 <-> 대전대덕
+    { srcPostal: '34141', tgtPostal: '42194', ringName: '경부 제1백본 엑스선' }, // 대전대덕 <-> 대구수성
+    { srcPostal: '42194', tgtPostal: '48058', ringName: '경부 제1백본 엑스선' }, // 대구수성 <-> 부산센텀
+    { srcPostal: '06234', tgtPostal: '13494', ringName: '호남 제2백본 엑스선' }, // 강남 <-> 판교
+    { srcPostal: '13494', tgtPostal: '30151', ringName: '호남 제2백본 엑스선' }, // 판교 <-> 세종
+    { srcPostal: '30151', tgtPostal: '61947', ringName: '호남 제2백본 엑스선' }, // 세종 <-> 광주상무
+    { srcPostal: '61947', tgtPostal: '59724', ringName: '호남 제2백본 엑스선' }, // 광주상무 <-> 여수
+    { srcPostal: '03186', tgtPostal: '26464', ringName: '영동 제3백본 엑스선' }, // 광화문 <-> 원주
+    { srcPostal: '26464', tgtPostal: '25457', ringName: '영동 제3백본 엑스선' }, // 원주 <-> 강릉
+    { srcPostal: '34141', tgtPostal: '54994', ringName: '충청-호남 연계축' },   // 대전대덕 <-> 전주혁신
+    { srcPostal: '42194', tgtPostal: '51435', ringName: '영남-호남 횡단축' },   // 대구수성 <-> 창원
+    { srcPostal: '51435', tgtPostal: '61947', ringName: '영남-호남 횡단축' },   // 창원 <-> 광주상무
+
+    // [B] 서울특별시 도심 환상링 (Seoul Metro Ring - 12개 국사 루프)
+    { srcPostal: '03186', tgtPostal: '03925' }, // 광화문 <-> 마포상암
+    { srcPostal: '03925', tgtPostal: '07335' }, // 상암 <-> 여의도
+    { srcPostal: '07335', tgtPostal: '08503' }, // 여의도 <-> 금천가산
+    { srcPostal: '08503', tgtPostal: '08708' }, // 가산 <-> 관악
+    { srcPostal: '08708', tgtPostal: '06611' }, // 관악 <-> 서초IDC
+    { srcPostal: '06611', tgtPostal: '06234' }, // 서초 <-> 강남
+    { srcPostal: '06234', tgtPostal: '05551' }, // 강남 <-> 잠실
+    { srcPostal: '05551', tgtPostal: '04763' }, // 잠실 <-> 한양성동
+    { srcPostal: '04763', tgtPostal: '02043' }, // 한양 <-> 중랑상봉
+    { srcPostal: '02043', tgtPostal: '01395' }, // 상봉 <-> 도봉창동
+    { srcPostal: '01395', tgtPostal: '03186' }, // 창동 <-> 광화문
+
+    // [C] 인천광역시 및 서부 메트로 링 (Incheon & West Metro Ring)
+    { srcPostal: '07335', tgtPostal: '07505' }, // 여의도 <-> 강서마곡
+    { srcPostal: '07505', tgtPostal: '14558' }, // 마곡 <-> 부천중동
+    { srcPostal: '14558', tgtPostal: '21554' }, // 부천 <-> 인천시청
+    { srcPostal: '21554', tgtPostal: '21998' }, // 인천시청 <-> 송도바이오
+    { srcPostal: '21998', tgtPostal: '22382' }, // 송도 <-> 인천공항
+    { srcPostal: '22382', tgtPostal: '22726' }, // 인천공항 <-> 청라국제
+    { srcPostal: '22726', tgtPostal: '10414' }, // 청라 <-> 일산호수
+    { srcPostal: '21998', tgtPostal: '15355' }, // 송도 <-> 안산스마트허브
+    { srcPostal: '15355', tgtPostal: '14067' }, // 안산 <-> 안양평촌
+    { srcPostal: '14067', tgtPostal: '06611' }, // 평촌 <-> 서초IDC
+
+    // [D] 경기도 남부 첨단 반도체/IT 벨트 링 (Gyeonggi South Semiconductor Ring)
+    { srcPostal: '13494', tgtPostal: '14067' }, // 판교IDC <-> 평촌스마트
+    { srcPostal: '14067', tgtPostal: '16490' }, // 평촌 <-> 수원중앙
+    { srcPostal: '16490', tgtPostal: '18469' }, // 수원 <-> 화성동탄
+    { srcPostal: '18469', tgtPostal: '17093' }, // 동탄 <-> 용인반도체
+    { srcPostal: '17093', tgtPostal: '13494' }, // 용인 <-> 판교IDC
+    { srcPostal: '18469', tgtPostal: '17901' }, // 동탄 <-> 평택고덕
+    { srcPostal: '17901', tgtPostal: '31156' }, // 평택 <-> 천안아산
+
+    // [E] 경기도 북부 및 평화 번영 링 (Gyeonggi North Loop)
+    { srcPostal: '03925', tgtPostal: '10414' }, // 상암 <-> 일산호수
+    { srcPostal: '10414', tgtPostal: '10881' }, // 일산 <-> 파주디스플레이
+    { srcPostal: '10881', tgtPostal: '11651' }, // 파주 <-> 의정부북부
+    { srcPostal: '11651', tgtPostal: '01395' }, // 의정부 <-> 도봉창동
+    { srcPostal: '11651', tgtPostal: '12133' }, // 의정부 <-> 남양주다산
+    { srcPostal: '12133', tgtPostal: '02043' }, // 남양주 <-> 상봉통신
+    { srcPostal: '12133', tgtPostal: '24249' }, // 남양주 <-> 춘천강원도청
+
+    // [F] 서해 최북단 도서 국경 링크 (West Sea Frontier Baengnyeongdo Link)
+    { srcPostal: '22382', tgtPostal: '23100', ringName: '서해 영토 방위 통신망' }, // 인천공항 <-> 백령도 (해상 마이크로웨이브 & 광케이블)
+
+    // [G] 충청/대전/세종 중부 R&D 광역 링 (Central Chungcheong R&D Ring)
+    { srcPostal: '34141', tgtPostal: '35242' }, // 대전대덕 <-> 대전둔산
+    { srcPostal: '35242', tgtPostal: '30151' }, // 대전둔산 <-> 정부세종청사
+    { srcPostal: '30151', tgtPostal: '32589' }, // 세종 <-> 공주백제
+    { srcPostal: '32589', tgtPostal: '35015' }, // 공주 <-> 충남도청내포
+    { srcPostal: '35015', tgtPostal: '31959' }, // 내포 <-> 서산대산
+    { srcPostal: '31959', tgtPostal: '31434' }, // 서산 <-> 아산탕정
+    { srcPostal: '31434', tgtPostal: '31156' }, // 아산탕정 <-> 천안아산
+    { srcPostal: '31156', tgtPostal: '28644' }, // 천안아산 <-> 청주하이닉스
+    { srcPostal: '28644', tgtPostal: '34141' }, // 청주 <-> 대전대덕
+    { srcPostal: '28644', tgtPostal: '27316' }, // 청주 <-> 충주기업도시
+    { srcPostal: '27316', tgtPostal: '27158' }, // 충주 <-> 제천통신
+    { srcPostal: '27158', tgtPostal: '26464' }, // 제천 <-> 원주혁신
+
+    // [H] 강원특별자치도 영동/영서 순환 링 (Gangwon Loop Ring)
+    { srcPostal: '24249', tgtPostal: '24822' }, // 춘천 <-> 속초설악
+    { srcPostal: '24822', tgtPostal: '25457' }, // 속초 <-> 강릉동해안
+    { srcPostal: '25457', tgtPostal: '25749' }, // 강릉 <-> 동해항만
+    { srcPostal: '25749', tgtPostal: '25932' }, // 동해 <-> 태백고원
+    { srcPostal: '25932', tgtPostal: '27158' }, // 태백 <-> 제천
+    { srcPostal: '26464', tgtPostal: '24249' }, // 원주 <-> 춘천
+
+    // [I] 동해안 에너지망 및 울릉도/독도 심해 해저망 (East Sea, Ulleungdo & Dokdo Links)
+    { srcPostal: '25749', tgtPostal: '36323' }, // 동해 <-> 울진한울원자력
+    { srcPostal: '36323', tgtPostal: '37666' }, // 울진 <-> 포항제철소
+    { srcPostal: '36323', tgtPostal: '40200', ringName: '동해 심해 해저 광전송망' }, // 울진 <-> 울릉도 (심해 해저 100G)
+    { srcPostal: '40200', tgtPostal: '40240', ringName: '독도 영토 통신망' }, // 울릉도 <-> 독도 (영토 초고속 마이크로웨이브 & 해저선)
+
+    // [J] 대구/경북 첨단 산업 벨트 링 (Daegu/Gyeongbuk Industrial Ring)
+    { srcPostal: '42194', tgtPostal: '41911' }, // 대구수성IDC <-> 대구중앙
+    { srcPostal: '41911', tgtPostal: '39281' }, // 대구중앙 <-> 구미전자산단
+    { srcPostal: '39281', tgtPostal: '39512' }, // 구미 <-> 김천혁신
+    { srcPostal: '39512', tgtPostal: '36691' }, // 김천 <-> 안동도청
+    { srcPostal: '36691', tgtPostal: '37666' }, // 안동 <-> 포항제철소
+    { srcPostal: '37666', tgtPostal: '38102' }, // 포항 <-> 경주원전
+    { srcPostal: '38102', tgtPostal: '42194' }, // 경주 <-> 대구수성
+    { srcPostal: '42194', tgtPostal: '42988' }, // 대구수성 <-> 대구국가산단
+    { srcPostal: '42988', tgtPostal: '51435' }, // 대구국가산단 <-> 창원
+
+    // [K] 부울경 동남권 메가 링 (Busan/Ulsan/Gyeongnam Mega Ring)
+    { srcPostal: '38102', tgtPostal: '44248' }, // 경주 <-> 울산자동차
+    { srcPostal: '44248', tgtPostal: '44675' }, // 울산자동차 <-> 울산석유화학
+    { srcPostal: '44675', tgtPostal: '50600' }, // 울산 <-> 양산물류
+    { srcPostal: '50600', tgtPostal: '48058' }, // 양산 <-> 부산센텀
+    { srcPostal: '48058', tgtPostal: '47545' }, // 부산센텀 <-> 부산시청
+    { srcPostal: '47545', tgtPostal: '48938' }, // 부산시청 <-> 부산항만
+    { srcPostal: '48938', tgtPostal: '46726' }, // 부산항만 <-> 부산녹산산단
+    { srcPostal: '46726', tgtPostal: '51000' }, // 부산녹산 <-> 김해스마트
+    { srcPostal: '51000', tgtPostal: '50600' }, // 김해 <-> 양산물류
+    { srcPostal: '46726', tgtPostal: '53201' }, // 부산녹산 <-> 거제대우조선
+    { srcPostal: '53201', tgtPostal: '53000' }, // 거제 <-> 통영해양
+    { srcPostal: '53000', tgtPostal: '52828' }, // 통영 <-> 진주항공
+    { srcPostal: '52828', tgtPostal: '51435' }, // 진주 <-> 창원기계
+    { srcPostal: '51435', tgtPostal: '51000' }, // 창원 <-> 김해
+
+    // [L] 호남/전라권 순환 링 (Honam/Jeolla Loop Ring)
+    { srcPostal: '54994', tgtPostal: '54000' }, // 전주혁신 <-> 군산새만금
+    { srcPostal: '54000', tgtPostal: '54500' }, // 군산 <-> 익산국가식품
+    { srcPostal: '54500', tgtPostal: '61947' }, // 익산 <-> 광주상무
+    { srcPostal: '61947', tgtPostal: '61011' }, // 광주상무 <-> 광주AI첨단
+    { srcPostal: '61947', tgtPostal: '58200' }, // 광주상무 <-> 나주에너지
+    { srcPostal: '58200', tgtPostal: '58564' }, // 나주 <-> 무안남악
+    { srcPostal: '58564', tgtPostal: '58600' }, // 무안 <-> 목포항만
+    { srcPostal: '58600', tgtPostal: '59000' }, // 목포 <-> 해남땅끝
+    { srcPostal: '59000', tgtPostal: '57900' }, // 해남 <-> 순천생태
+    { srcPostal: '57900', tgtPostal: '59724' }, // 순천 <-> 여수산단
+    { srcPostal: '59724', tgtPostal: '57700' }, // 여수 <-> 광양제철소
+    { srcPostal: '57700', tgtPostal: '57900' }, // 광양 <-> 순천
+    { srcPostal: '57700', tgtPostal: '52828' }, // 광양 <-> 진주항공 (영호남 남해안 연계)
+    { srcPostal: '57900', tgtPostal: '54994' }, // 순천 <-> 전주혁신 (내륙 종단축)
+    { srcPostal: '54000', tgtPostal: '35015' }, // 군산 <-> 내포홍성 (서해안 종단축)
+
+    // [M] 남해안 & 제주 해저 광케이블망 (Jeju Submarine Optical Network)
+    { srcPostal: '59000', tgtPostal: '63122', ringName: '제1 제주-육지 해저 광케이블' }, // 해남 <-> 제주시
+    { srcPostal: '59724', tgtPostal: '63565', ringName: '제2 제주-육지 해저 광케이블' }, // 여수 <-> 서귀포
+    { srcPostal: '48058', tgtPostal: '63565', ringName: '동남권 제주 직통 해저 광케이블' }, // 부산센텀 <-> 서귀포
+    { srcPostal: '63122', tgtPostal: '63000' }, // 제주중앙 <-> 제주첨단
+    { srcPostal: '63000', tgtPostal: '63565' }, // 제주첨단 <-> 서귀포해저
+    { srcPostal: '63565', tgtPostal: '63122' }, // 서귀포 <-> 제주중앙 (제주도 일주 링)
   ];
 
-  backbonePairs.forEach((pair, idx) => {
-    const srcNode = coreNodes.find(n => n.postalCode === pair.srcPostal);
-    const tgtNode = coreNodes.find(n => n.postalCode === pair.tgtPostal);
+  // 대표 장비 노드 선별 (전송장비, 코어 스위치, 코어 라우터)
+  const coreNodes = nodes.filter(n => n.type === 'CORE_ROUTER');
+  const roadmNodes = nodes.filter(n => n.type === 'OPTICAL_DWDM');
+  const switchNodes = nodes.filter(n => n.type === 'CORE_L3_SWITCH');
 
-    if (srcNode && tgtNode) {
-      const isCriticalPair = (srcNode.status === 'CRITICAL' && tgtNode.status === 'CRITICAL') ||
-                             (srcNode.postalCode === '06234' && tgtNode.postalCode === '13494');
+  nationwidePairs.forEach((pair, idx) => {
+    // 1) 코어 라우터 간 100G 백본 IP 링크
+    const srcCore = coreNodes.find(n => n.postalCode === pair.srcPostal);
+    const tgtCore = coreNodes.find(n => n.postalCode === pair.tgtPostal);
+    if (srcCore && tgtCore) {
+      const isCriticalPair = (srcCore.status === 'CRITICAL' && tgtCore.status === 'CRITICAL') ||
+                             (srcCore.postalCode === '06234' && tgtCore.postalCode === '13494');
 
       edges.push({
-        id: `EDGE_BB_${srcNode.id}_${tgtNode.id}`,
-        source: srcNode.id,
-        target: tgtNode.id,
-        sourceCoordinates: [srcNode.lng, srcNode.lat],
-        targetCoordinates: [tgtNode.lng, tgtNode.lat],
+        id: `EDGE_BB_${srcCore.id}_${tgtCore.id}`,
+        source: srcCore.id,
+        target: tgtCore.id,
+        sourceCoordinates: [srcCore.lng, srcCore.lat],
+        targetCoordinates: [tgtCore.lng, tgtCore.lat],
         linkType: 'BACKBONE_100G',
-        status: isCriticalPair ? 'DOWN' : (srcNode.status === 'MAJOR' ? 'WARNING' : 'UP'),
+        status: isCriticalPair ? 'DOWN' : (srcCore.status === 'MAJOR' ? 'WARNING' : 'UP'),
         bandwidthGbps: 100,
         trafficUtilPercent: isCriticalPair ? 0 : Math.floor(55 + Math.random() * 38),
-        latencyMs: Number((1.5 + Math.random() * 4.0).toFixed(2)),
+        latencyMs: Number((1.2 + Math.random() * 3.5).toFixed(2)),
         packetLossPercent: isCriticalPair ? 100 : 0,
         alarms: isCriticalPair ? [
           {
             id: `ALM_EDGE_${idx}`,
             severity: 'CRITICAL',
-            title: '100G Fiber Cut Detected',
+            title: '100G IP Trunk Session Down',
             code: 'ALM_TRUNK_CUT',
-            timestamp: '2026-09-16 16:44:00',
-            description: `${srcNode.stationName} ~ ${tgtNode.stationName} 구간 주 광선로 단선 감지됨`,
+            timestamp: '2026-09-18 14:44:00',
+            description: `${srcCore.stationName} ~ ${tgtCore.stationName} 구간 주 백본 IP 트렁크 단절`,
           }
         ] : [],
+      });
+    }
+
+    // 2) 전송장비 ROADM 간 DWDM 광 파장 전송 링크 (Optical Lambda - 400G)
+    const srcRoadm = roadmNodes.find(n => n.postalCode === pair.srcPostal);
+    const tgtRoadm = roadmNodes.find(n => n.postalCode === pair.tgtPostal);
+    if (srcRoadm && tgtRoadm) {
+      const isRoadmDown = srcRoadm.status === 'CRITICAL' || tgtRoadm.status === 'CRITICAL';
+      edges.push({
+        id: `EDGE_DWDM_${srcRoadm.id}_${tgtRoadm.id}`,
+        source: srcRoadm.id,
+        target: tgtRoadm.id,
+        sourceCoordinates: [srcRoadm.lng, srcRoadm.lat],
+        targetCoordinates: [tgtRoadm.lng, tgtRoadm.lat],
+        linkType: 'DWDM_OPTICAL_LAMBDA',
+        status: isRoadmDown ? 'DOWN' : 'UP',
+        bandwidthGbps: 400,
+        trafficUtilPercent: isRoadmDown ? 0 : Math.floor(45 + Math.random() * 40),
+        latencyMs: Number((0.6 + Math.random() * 1.5).toFixed(2)),
+        packetLossPercent: isRoadmDown ? 100 : 0,
+        alarms: isRoadmDown ? [
+          {
+            id: `ALM_OPT_LAMBDA_${idx}`,
+            severity: 'CRITICAL',
+            title: 'DWDM Optical Lambda Loss',
+            code: 'ALM_LAMBDA_LOS',
+            timestamp: '2026-09-18 14:42:15',
+            description: `광 전송망 ${srcRoadm.stationName} ~ ${tgtRoadm.stationName} 파장 채널 광신호 감쇄 손실`,
+          }
+        ] : [],
+      });
+    }
+
+    // 3) 코어 L3 스위치 간 메트로 링 스위치 링크 (Metro Ring 40G)
+    const srcSwitch = switchNodes.find(n => n.postalCode === pair.srcPostal);
+    const tgtSwitch = switchNodes.find(n => n.postalCode === pair.tgtPostal);
+    if (srcSwitch && tgtSwitch) {
+      edges.push({
+        id: `EDGE_SW_METRO_${srcSwitch.id}_${tgtSwitch.id}`,
+        source: srcSwitch.id,
+        target: tgtSwitch.id,
+        sourceCoordinates: [srcSwitch.lng, srcSwitch.lat],
+        targetCoordinates: [tgtSwitch.lng, tgtSwitch.lat],
+        linkType: 'METRO_RING_40G',
+        status: 'UP',
+        bandwidthGbps: 40,
+        trafficUtilPercent: Math.floor(35 + Math.random() * 45),
+        latencyMs: Number((0.5 + Math.random() * 1.2).toFixed(2)),
+        packetLossPercent: 0,
+        alarms: [],
       });
     }
   });
@@ -286,6 +560,7 @@ export function generateInitialTopology(): { nodes: NetworkNode[]; edges: Networ
         id: nodeId,
         name: `${mtn.name} [${mtn.mountain}] ${dev.suffix}`,
         type: dev.role,
+        category: dev.role === 'DIST_SWITCH' ? 'SWITCH' : 'ROUTER',
         lat: mtn.lat + offsetLat,
         lng: mtn.lng + offsetLng,
         altitude: dev.alt,

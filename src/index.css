@@ -1,89 +1,133 @@
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
 :root {
-  --bg-primary: #0b0f19;
-  --bg-panel: rgba(15, 23, 42, 0.85);
-  --bg-card: rgba(30, 41, 59, 0.7);
-  --border-color: rgba(56, 189, 248, 0.2);
-  --border-hover: rgba(56, 189, 248, 0.5);
+  /* 테마 컬러 팔레트: Enterprise Cybernetic NOC */
+  --bg-primary: #070b14;
+  --bg-panel: rgba(13, 20, 36, 0.88);
+  --bg-panel-solid: #0d1424;
+  --bg-card: rgba(22, 33, 56, 0.65);
+  --bg-card-hover: rgba(30, 48, 80, 0.8);
+  --bg-input: rgba(10, 16, 29, 0.85);
+
+  --border-color: rgba(56, 189, 248, 0.22);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(56, 189, 248, 0.55);
+  --border-active: #38bdf8;
+
   --accent-cyan: #06b6d4;
   --accent-blue: #38bdf8;
+  --accent-indigo: #6366f1;
+
   --color-critical: #ef4444;
+  --color-critical-bg: rgba(239, 68, 68, 0.15);
   --color-major: #f97316;
+  --color-major-bg: rgba(249, 115, 22, 0.15);
   --color-minor: #eab308;
+  --color-minor-bg: rgba(234, 179, 8, 0.15);
   --color-normal: #10b981;
-  --text-main: #f1f5f9;
+  --color-normal-bg: rgba(16, 185, 129, 0.15);
+
+  --text-main: #f8fafc;
+  --text-sub: #cbd5e1;
   --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  --font-ui: 'Pretendard', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace, Consolas;
+
+  --glow-cyan: 0 0 16px rgba(6, 182, 212, 0.4);
+  --glow-blue: 0 0 16px rgba(56, 189, 248, 0.4);
+  --glow-red: 0 0 20px rgba(239, 68, 68, 0.5);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Pretendard', sans-serif;
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body {
+html, body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   overflow: hidden;
   width: 100vw;
   height: 100vh;
+  margin: 0;
+  padding: 0;
   user-select: none;
 }
 
-#root {
-  width: 100%;
-  height: 100%;
+#root, .geotopo-app {
+  width: 100vw;
+  height: 100vh;
   position: relative;
+  overflow: hidden;
 }
 
-/* Glassmorphism Classes */
+/* 숫자/메트릭 폰트 유틸리티 */
+.font-mono {
+  font-family: var(--font-mono) !important;
+  letter-spacing: -0.02em;
+}
+
+/* Glassmorphism Panel */
 .glass-panel {
   background: var(--bg-panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.55), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
   border-radius: 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-panel:hover {
+  border-color: var(--border-hover);
 }
 
 .glass-card {
   background: var(--bg-card);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:hover {
+  background: var(--bg-card-hover);
   border-color: var(--border-hover);
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+  box-shadow: var(--glow-blue);
+  transform: translateY(-1px);
 }
 
-/* Scrollbar */
+/* Scrollbar Style */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(10, 16, 29, 0.5);
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb {
   background: rgba(56, 189, 248, 0.3);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(56, 189, 248, 0.6);
 }
 
-/* Pulse Animations for Critical Alarms */
+/* NOC Pulse Animations */
 @keyframes pulse-red {
   0% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
   }
   70% {
-    box-shadow: 0 0 0 12px rgba(239, 68, 68, 0);
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
@@ -91,15 +135,15 @@ body {
 }
 
 .pulse-critical {
-  animation: pulse-red 2s infinite;
+  animation: pulse-red 1.8s infinite;
 }
 
 @keyframes pulse-cyan {
   0% {
-    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.6);
+    box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(6, 182, 212, 0);
+    box-shadow: 0 0 0 8px rgba(6, 182, 212, 0);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
@@ -107,27 +151,79 @@ body {
 }
 
 .pulse-active {
-  animation: pulse-cyan 2.5s infinite;
+  animation: pulse-cyan 2.4s infinite;
 }
 
-/* Glow Badges */
+@keyframes radar-sweep {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Badges */
 .badge-critical {
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--color-critical-bg);
   color: #fca5a5;
   border: 1px solid rgba(239, 68, 68, 0.5);
 }
 .badge-major {
-  background: rgba(249, 115, 22, 0.2);
+  background: var(--color-major-bg);
   color: #fdba74;
   border: 1px solid rgba(249, 115, 22, 0.5);
 }
 .badge-minor {
-  background: rgba(234, 179, 8, 0.2);
+  background: var(--color-minor-bg);
   color: #fde047;
   border: 1px solid rgba(234, 179, 8, 0.5);
 }
 .badge-normal {
-  background: rgba(16, 185, 129, 0.2);
+  background: var(--color-normal-bg);
   color: #86efac;
   border: 1px solid rgba(16, 185, 129, 0.5);
+}
+
+/* Cybernetic HUD Tooltip */
+.hud-tooltip {
+  background: rgba(10, 16, 29, 0.94);
+  border: 1px solid #38bdf8;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 15px rgba(56, 189, 248, 0.35);
+  border-radius: 8px;
+  padding: 10px 14px;
+  pointer-events: none;
+  font-size: 12px;
+  color: #f8fafc;
+  backdrop-filter: blur(16px);
+  z-index: 100;
+  max-width: 320px;
+}
+
+/* Tab Switcher */
+.noc-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.noc-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.noc-tab-btn.active {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
 }

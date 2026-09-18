@@ -1,14 +1,23 @@
 export type AlarmSeverity = 'CRITICAL' | 'MAJOR' | 'MINOR' | 'NORMAL';
 
+export type DeviceCategory = 'ALL' | 'TRANSMISSION' | 'SWITCH' | 'ROUTER' | 'WIRELESS';
+
 export type DeviceType = 
-  | 'CORE_ROUTER' 
-  | 'AGGREGATION_ROUTER' 
-  | 'DIST_SWITCH' 
-  | 'ACCESS_SWITCH' 
-  | 'OPTICAL_MUX' 
-  | '5G_BASE_STATION';
+  | 'OPTICAL_DWDM'       // ROADM / DWDM 전송장비
+  | 'PACKET_POTN'        // POTN / OTN 패킷 광전송장비
+  | 'MSPP_PTN'           // PTN / MPLS-TP 전송장비
+  | 'OPTICAL_MUX'        // 광 분기결합기 (Optical Mux)
+  | 'CORE_L3_SWITCH'     // 백본 코어 L3 스위치
+  | 'DIST_L3_SWITCH'     // 집선 L3 스위치
+  | 'ACCESS_L2_SWITCH'   // 가입자 L2 스위치
+  | 'DIST_SWITCH'        // 기존 호환
+  | 'ACCESS_SWITCH'      // 기존 호환
+  | 'CORE_ROUTER'        // 코어 라우터
+  | 'AGGREGATION_ROUTER' // 집선 라우터
+  | '5G_BASE_STATION';   // 5G 기지국
 
 export type LinkType = 
+  | 'DWDM_OPTICAL_LAMBDA' // 전송망 광 파장 링크 (100G/400G Lambda)
   | 'BACKBONE_100G' 
   | 'METRO_RING_40G' 
   | 'DIST_10G' 
@@ -23,10 +32,26 @@ export interface AlarmItem {
   description: string;
 }
 
+export interface TransmissionDetails {
+  wavelengthNm: number;       // 광 파장 (예: 1550.12nm)
+  opticalPowerDbm: number;    // 광 수신 레벨 (예: -14.5 dBm)
+  channelCount: number;       // 지원 파장 채널수 (예: 96ch)
+  ringName: string;           // 소속 전송 광링 (예: '수도권 제1광링')
+  laserState: 'ACTIVE' | 'WARNING' | 'FAIL';
+}
+
+export interface SwitchDetails {
+  switchingCapacityGbps: number; // 스위칭 용량 (예: 12.8 Tbps)
+  vlanCount: number;             // 할당 VLAN 수 (예: 64)
+  macTableCount: number;         // 학습 MAC 수 (예: 14,200)
+  spanningTreeState: 'STABLE' | 'TOPOLOGY_CHANGE' | 'LOOP_DETECTED';
+}
+
 export interface NetworkNode {
   id: string;
   name: string;
   type: DeviceType;
+  category: DeviceCategory;
   lat: number;
   lng: number;
   altitude: number; // 3D 높이 (m)
@@ -49,6 +74,8 @@ export interface NetworkNode {
     activePorts: number;
   };
   alarms: AlarmItem[];
+  transmissionDetails?: TransmissionDetails;
+  switchDetails?: SwitchDetails;
 }
 
 export interface NetworkEdge {

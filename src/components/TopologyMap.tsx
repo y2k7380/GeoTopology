@@ -15,7 +15,8 @@ maplibregl.addProtocol('pmtiles', pmtilesProtocol.tile);
 import type { MapStyleType } from '../data/mapStyles';
 import type { NetworkNode, NetworkEdge, RegionSummaryNode, AlarmSeverity, LabelConfig, LayerVisibilityConfig } from '../types/topology';
 import type { ClusteredTopologyResult } from '../utils/summaryEngine';
-import { computeHierarchicalTopology } from '../utils/summaryEngine';
+import { computeHierarchicalTopology, ZOOM_THRESHOLDS } from '../utils/summaryEngine';
+import { soundFx } from '../utils/audio';
 
 interface TopologyMapProps {
   allNodes: NetworkNode[];
@@ -51,6 +52,10 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
   const overlayRef = useRef<MapboxOverlay | null>(null);
 
   const [currentZoom, setCurrentZoom] = useState<number>(6.8);
+  const [mapCenter, setMapCenter] = useState<{ lng: number; lat: number }>({ lng: 127.5, lat: 36.3 });
+  const [mapPitch, setMapPitch] = useState<number>(48);
+  const [mapBearing, setMapBearing] = useState<number>(-12);
+
   const [hoverInfo, setHoverInfo] = useState<{
     x: number;
     y: number;
@@ -97,11 +102,18 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
 
     map.addControl(overlay as any);
 
-    map.on('zoom', () => {
+    const updateCameraState = () => {
       const z = map.getZoom();
       setCurrentZoom(z);
       onZoomChange?.(z);
-    });
+      const center = map.getCenter();
+      setMapCenter({ lng: center.lng, lat: center.lat });
+      setMapPitch(map.getPitch());
+      setMapBearing(map.getBearing());
+    };
+
+    map.on('zoom', updateCameraState);
+    map.on('move', updateCameraState);
 
     mapRef.current = map;
     (window as any).flyTo = (lng: number, lat: number, zoom = 10, pitch = 50) => {
@@ -177,7 +189,8 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
     const topologyData: ClusteredTopologyResult = computeHierarchicalTopology(
       allNodes,
       allEdges,
-      currentZoom
+      currentZoom,
+      layerConfig.lodMode
     );
 
     // 필터 적용
@@ -410,6 +423,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
           getSourceColor: [10, 15, 30, 230], // 고대비 블랙 외곽선
           getTargetColor: [10, 15, 30, 230],
           getWidth: d => {
+            if (d.linkType === 'DWDM_OPTICAL_LAMBDA') return 10.0; // 전송망 광파장 트렁크
             if (d.linkType === 'BACKBONE_100G') return 8.5;
             if (d.linkType === 'METRO_RING_40G') return 6.0;
             return 4.5;
@@ -430,14 +444,17 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
           getSourceColor: d => {
             if (d.status === 'DOWN') return [255, 35, 60, 255]; // 네온 크림슨 레드
             if (d.status === 'WARNING') return [255, 145, 0, 255]; // 네온 앰버 오렌지
+            if (d.linkType === 'DWDM_OPTICAL_LAMBDA') return [192, 132, 252, 255]; // 광전송망 네온 바이올렛
             return [0, 102, 255, 255]; // 일렉트릭 블루
           },
           getTargetColor: d => {
             if (d.status === 'DOWN') return [255, 80, 80, 255];
             if (d.status === 'WARNING') return [255, 180, 0, 255];
+            if (d.linkType === 'DWDM_OPTICAL_LAMBDA') return [232, 121, 249, 255]; // 광전송망 핫 마젠타
             return [0, 220, 255, 255]; // 네온 사이안
           },
           getWidth: d => {
+            if (d.linkType === 'DWDM_OPTICAL_LAMBDA') return 6.8;
             if (d.linkType === 'BACKBONE_100G') return 5.5;
             if (d.linkType === 'METRO_RING_40G') return 3.8;
             return 2.5;
@@ -445,6 +462,11 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
           widthMinPixels: 2.5, // 줌아웃해도 최소 2.5픽셀 코어 보장
           getHeight: 0.42, // 볼록한 3D 포물선 곡선
           pickable: true,
+          onClick: info => {
+            if (info.object) {
+              soundFx.playClick();
+            }
+          },
           onHover: info => {
             if (info.object) {
               setHoverInfo({
@@ -508,10 +530,11 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             pickable: true,
             onClick: info => {
               if (info.object) {
+                soundFx.playFocus();
                 onSelectNode(info.object);
                 // 서머리 노드 클릭 시 해당 위치로 줌인 (시도 -> 국사, 국사 -> 상세 장비)
                 if (mapRef.current) {
-                  const targetZoom = isProvince ? 9.5 : 13.5;
+                  const targetZoom = isProvince ? 7.8 : 13.5;
                   mapRef.current.flyTo({
                     center: [info.object.lng, info.object.lat],
                     zoom: targetZoom,
@@ -613,7 +636,14 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             data: filteredDetailedNodes,
             getPosition: d => [d.lng, d.lat],
             getElevation: d => d.altitude * 1.8,
-            getFillColor: d => getSeverityColor(d.status),
+            getFillColor: d => {
+              if (d.status === 'CRITICAL') return [239, 68, 68, 245];
+              if (d.status === 'MAJOR') return [249, 115, 22, 245];
+              if (d.status === 'MINOR') return [234, 179, 8, 245];
+              if (d.category === 'TRANSMISSION') return [192, 132, 252, 235]; // 광학 전송망 퍼플
+              if (d.category === 'SWITCH') return [52, 211, 153, 235]; // L2/L3 스위치 에메랄드
+              return [56, 189, 248, 235]; // 코어 라우터 블루
+            },
             radius: 45,
             diskResolution: 4, // 4각형 네트워크 장비 박스 모양
             angle: 45, // 반듯한 4각 직육면체 섀시 정렬
@@ -624,6 +654,7 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
             pickable: true,
             onClick: info => {
               if (info.object) {
+                soundFx.playFocus();
                 onSelectNode(info.object);
               }
             },
@@ -771,9 +802,9 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
   }, [allNodes, allEdges, currentZoom, filterSeverity, getSeverityColor, onSelectNode, selectedNode, labelConfig, layerConfig, currentMapStyle, offlineCities, mountains]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
       {/* MapLibre WebGL Canvas Container */}
-      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+      <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
 
       {/* 줌 레벨 인디케이터 (하단 우측) */}
       <div
@@ -801,73 +832,155 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
         <span>
           표시 모드:{' '}
           <strong style={{ color: '#10b981' }}>
-            {currentZoom < 7.8
+            {layerConfig.lodMode === 'ALWAYS_FULL'
+              ? '전체 상세 장비 강제 노출'
+              : currentZoom < ZOOM_THRESHOLDS.PROVINCE_MAX
               ? '전국 광역시도 서머리'
-              : currentZoom < 11.5
-              ? '통신국사/우편번호 서머리'
-              : '상세 개별 장비 및 물리 링크'}
+              : currentZoom < ZOOM_THRESHOLDS.DISTRICT_MAX
+              ? '전국 통신국사/거점 허브'
+              : '상세 3D 섀시 및 물리 링크'}
           </strong>
         </span>
       </div>
 
-      {/* 툴팁 오버레이 */}
+      {/* 화면 하단 실시간 좌표 및 카메라 HUD 오버레이 바 */}
+      <div
+        className="glass-panel font-mono"
+        style={{
+          position: 'absolute',
+          bottom: 16,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 35,
+          padding: '6px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          fontSize: 11,
+          color: '#94a3b8',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(56, 189, 248, 0.3)',
+          borderRadius: 20,
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+          <span style={{ color: '#cbd5e1' }}>CENTER:</span>
+          <strong style={{ color: '#38bdf8' }}>{mapCenter.lat.toFixed(4)}°N, {mapCenter.lng.toFixed(4)}°E</strong>
+        </div>
+        <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+        <div>
+          <span style={{ color: '#cbd5e1' }}>ZOOM:</span> <strong style={{ color: '#38bdf8' }}>{currentZoom.toFixed(1)}</strong>
+        </div>
+        <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+        <div>
+          <span style={{ color: '#cbd5e1' }}>PITCH:</span> <strong style={{ color: '#38bdf8' }}>{Math.round(mapPitch)}°</strong>
+        </div>
+        <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+        <div>
+          <span style={{ color: '#cbd5e1' }}>HEADING:</span> <strong style={{ color: '#38bdf8' }}>{Math.round(mapBearing)}°</strong>
+        </div>
+      </div>
+
+      {/* 마우스 호버 시 인터랙티브 사이버네틱 HUD 툴팁 */}
       {hoverInfo && (
         <div
+          className="hud-tooltip"
           style={{
             position: 'absolute',
-            left: hoverInfo.x + 12,
-            top: hoverInfo.y + 12,
-            pointerEvents: 'none',
-            zIndex: 100,
-            background: 'rgba(15, 23, 42, 0.95)',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
-            borderRadius: 8,
-            padding: '10px 14px',
-            color: '#f8fafc',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-            fontSize: 13,
-            maxWidth: 320,
-            backdropFilter: 'blur(10px)',
+            left: hoverInfo.x + 14,
+            top: hoverInfo.y + 14,
           }}
         >
           {hoverInfo.type === 'summary' && (
             <div>
-              <div style={{ fontWeight: 'bold', fontSize: 14, color: '#38bdf8', marginBottom: 4 }}>
-                {hoverInfo.object.name}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontWeight: 'bold', fontSize: 13, color: '#38bdf8' }}>
+                  {hoverInfo.object.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '1px 5px',
+                    borderRadius: 3,
+                    background: hoverInfo.object.highestSeverity === 'CRITICAL' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)',
+                    color: hoverInfo.object.highestSeverity === 'CRITICAL' ? '#ef4444' : '#10b981',
+                  }}
+                >
+                  {hoverInfo.object.highestSeverity}
+                </span>
               </div>
-              <div style={{ color: '#94a3b8', fontSize: 12, marginBottom: 6 }}>
-                우편번호 대역: {hoverInfo.object.postalCodePrefix}
+              <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 6 }}>
+                우편번호 대역: <strong className="font-mono" style={{ color: '#cbd5e1' }}>{hoverInfo.object.postalCodePrefix}</strong>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, fontSize: 12 }}>
-                <div>총 장비: <strong>{hoverInfo.object.nodeCount}대</strong></div>
-                <div>트래픽: <strong>{hoverInfo.object.totalTrafficGbps} Gbps</strong></div>
-                <div style={{ color: '#ef4444' }}>Critical: <strong>{hoverInfo.object.criticalCount}</strong></div>
-                <div style={{ color: '#f97316' }}>Major: <strong>{hoverInfo.object.majorCount}</strong></div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, fontSize: 11, background: 'rgba(255,255,255,0.03)', padding: 6, borderRadius: 4 }}>
+                <div>총 장비: <strong className="font-mono">{hoverInfo.object.nodeCount}대</strong></div>
+                <div>트래픽: <strong className="font-mono">{hoverInfo.object.totalTrafficGbps}G</strong></div>
+                <div style={{ color: '#ef4444' }}>Critical: <strong className="font-mono">{hoverInfo.object.criticalCount}</strong></div>
+                <div style={{ color: '#f97316' }}>Major: <strong className="font-mono">{hoverInfo.object.majorCount}</strong></div>
               </div>
-              <div style={{ marginTop: 6, fontSize: 11, color: '#64748b' }}>
-                클릭 시 해당 권역으로 3D 줌인합니다.
+              <div style={{ marginTop: 6, fontSize: 10, color: '#06b6d4', textAlign: 'right' }}>
+                클릭 시 해당 권역으로 3D 줌인 ➔
               </div>
             </div>
           )}
 
           {hoverInfo.type === 'device' && (
             <div>
-              <div style={{ fontWeight: 'bold', fontSize: 14, color: '#38bdf8', marginBottom: 2 }}>
-                {hoverInfo.object.name}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontWeight: 'bold', fontSize: 13, color: '#38bdf8' }}>
+                  {hoverInfo.object.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '1px 5px',
+                    borderRadius: 3,
+                    background: hoverInfo.object.status === 'CRITICAL' ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)',
+                    color: hoverInfo.object.status === 'CRITICAL' ? '#ef4444' : '#10b981',
+                  }}
+                >
+                  {hoverInfo.object.status}
+                </span>
               </div>
-              <div style={{ color: '#cbd5e1', fontSize: 12, marginBottom: 4 }}>
-                {hoverInfo.object.ipAddress} ({hoverInfo.object.type})
+              <div className="font-mono" style={{ color: '#cbd5e1', fontSize: 11, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>{hoverInfo.object.ipAddress}</span>
+                <span>•</span>
+                <span
+                  style={{
+                    color: hoverInfo.object.category === 'TRANSMISSION' ? '#c084fc' : hoverInfo.object.category === 'SWITCH' ? '#34d399' : '#38bdf8',
+                    fontWeight: 700,
+                  }}
+                >
+                  {hoverInfo.object.type}
+                </span>
               </div>
-              <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 6 }}>
-                우편번호: [{hoverInfo.object.postalCode}] {hoverInfo.object.address}
+              <div style={{ color: '#94a3b8', fontSize: 10, marginBottom: 6 }}>
+                [{hoverInfo.object.postalCode}] {hoverInfo.object.stationName} ({hoverInfo.object.rackLocation})
               </div>
-              <div style={{ display: 'flex', gap: 10, fontSize: 12, marginBottom: 4 }}>
-                <div>상태: <span style={{ fontWeight: 600, color: hoverInfo.object.status === 'CRITICAL' ? '#ef4444' : '#10b981' }}>{hoverInfo.object.status}</span></div>
-                <div>CPU: <strong>{hoverInfo.object.metrics.cpuPercent}%</strong></div>
-                <div>트래픽: <strong>{hoverInfo.object.metrics.trafficGbps}G</strong></div>
+
+              {/* 전송장비 / 스위치 특화 메트릭 한눈에 표시 */}
+              {hoverInfo.object.category === 'TRANSMISSION' && hoverInfo.object.transmissionDetails && (
+                <div style={{ background: 'rgba(192, 132, 252, 0.1)', border: '1px solid rgba(192, 132, 252, 0.3)', borderRadius: 4, padding: '4px 6px', fontSize: 10, color: '#e9d5ff', marginBottom: 6 }}>
+                  광파장: <strong>{hoverInfo.object.transmissionDetails.wavelengthNm}nm</strong> | 수신: <strong>{hoverInfo.object.transmissionDetails.opticalPowerDbm}dBm</strong>
+                </div>
+              )}
+              {hoverInfo.object.category === 'SWITCH' && hoverInfo.object.switchDetails && (
+                <div style={{ background: 'rgba(52, 211, 153, 0.1)', border: '1px solid rgba(52, 211, 153, 0.3)', borderRadius: 4, padding: '4px 6px', fontSize: 10, color: '#a7f3d0', marginBottom: 6 }}>
+                  스위칭: <strong>{hoverInfo.object.switchDetails.switchingCapacityGbps >= 1000 ? `${(hoverInfo.object.switchDetails.switchingCapacityGbps / 1000).toFixed(1)}Tbps` : `${hoverInfo.object.switchDetails.switchingCapacityGbps}Gbps`}</strong> | VLAN: <strong>{hoverInfo.object.switchDetails.vlanCount}개</strong>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10, fontSize: 11, background: 'rgba(255,255,255,0.03)', padding: 6, borderRadius: 4 }}>
+                <div>CPU: <strong className="font-mono" style={{ color: hoverInfo.object.metrics.cpuPercent > 80 ? '#ef4444' : '#38bdf8' }}>{hoverInfo.object.metrics.cpuPercent}%</strong></div>
+                <div>트래픽: <strong className="font-mono" style={{ color: '#10b981' }}>{hoverInfo.object.metrics.trafficGbps}G</strong></div>
+                <div>온도: <strong className="font-mono">{hoverInfo.object.metrics.tempCelsius}°C</strong></div>
               </div>
               {hoverInfo.object.alarms.length > 0 && (
-                <div style={{ marginTop: 4, color: '#ef4444', fontSize: 11, borderTop: '1px solid rgba(239,68,68,0.2)', paddingTop: 4 }}>
+                <div style={{ marginTop: 6, color: '#ef4444', fontSize: 10, borderTop: '1px solid rgba(239,68,68,0.2)', paddingTop: 4 }}>
                   🚨 {hoverInfo.object.alarms[0].title}
                 </div>
               )}
@@ -876,17 +989,28 @@ export const TopologyMap: React.FC<TopologyMapProps> = ({
 
           {hoverInfo.type === 'edge' && (
             <div>
-              <div style={{ fontWeight: 'bold', fontSize: 13, color: '#38bdf8', marginBottom: 4 }}>
-                {hoverInfo.object.linkType} 링크
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontWeight: 'bold', fontSize: 12, color: '#38bdf8' }}>
+                  {hoverInfo.object.linkType}
+                </span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '1px 5px',
+                    borderRadius: 3,
+                    background: hoverInfo.object.status === 'DOWN' ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)',
+                    color: hoverInfo.object.status === 'DOWN' ? '#ef4444' : '#10b981',
+                  }}
+                >
+                  {hoverInfo.object.status}
+                </span>
               </div>
-              <div style={{ fontSize: 12, marginBottom: 2 }}>
-                상태: <span style={{ color: hoverInfo.object.status === 'DOWN' ? '#ef4444' : '#10b981', fontWeight: 600 }}>{hoverInfo.object.status}</span>
+              <div style={{ fontSize: 11, color: '#cbd5e1' }}>
+                대역폭: <strong className="font-mono">{hoverInfo.object.bandwidthGbps} Gbps</strong> (사용률 {hoverInfo.object.trafficUtilPercent}%)
               </div>
-              <div style={{ fontSize: 12, color: '#cbd5e1' }}>
-                대역폭: {hoverInfo.object.bandwidthGbps} Gbps (사용률 {hoverInfo.object.trafficUtilPercent}%)
-              </div>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                지연시간: {hoverInfo.object.latencyMs} ms
+              <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                레이턴시: <strong className="font-mono">{hoverInfo.object.latencyMs} ms</strong>
               </div>
             </div>
           )}
